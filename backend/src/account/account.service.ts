@@ -71,8 +71,11 @@ export class AccountService {
         return `This action returns all account`;
     }
 
-    async findOne(id: number) {
-        return await this.db.connection.select().from(account).where(eq(account.id, id))
+    async findOne(email: string) {
+        return await this.db.connection
+            .select()
+            .from(account)
+            .where(eq(account.email, email))
     }
 
     update(id: number, updateAccountDto: UpdateAccountDto) {
