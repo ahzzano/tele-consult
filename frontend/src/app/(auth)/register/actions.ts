@@ -1,5 +1,7 @@
 "use server";
 
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 
 const requiredText = z.string().trim().min(1, "Required");
@@ -48,6 +50,13 @@ const registrationSchema = z.discriminatedUnion("role", [
     doctorRegistrationSchema,
 ]);
 
+type LoginResponse = {
+    success: boolean;
+    data?: {
+        access_token?: string;
+    };
+};
+
 export async function register(formData: FormData) {
     const backendUrl = process.env.BACKEND_URL;
 
@@ -69,7 +78,6 @@ export async function register(formData: FormData) {
 
     const payload = result.data;
 
-    console.log(backendUrl)
     const response = await fetch(`${backendUrl}/account`, {
         method: "POST",
         headers: {
@@ -81,4 +89,36 @@ export async function register(formData: FormData) {
     if (!response.ok) {
         throw new Error("Registration failed");
     }
+
+    const loginResponse = await fetch(`${backendUrl}/auth/login`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            email: payload.email,
+            password: payload.password,
+        }),
+    });
+
+    if (!loginResponse.ok) {
+        throw new Error("Registration succeeded, but login failed");
+    }
+
+    const body = (await loginResponse.json()) as LoginResponse;
+    const accessToken = body.data?.access_token;
+
+    if (!accessToken) {
+        throw new Error("Login response did not include an access token");
+    }
+
+    const cookieStore = await cookies();
+    cookieStore.set("auth_token", accessToken, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+    });
+
+    redirect("/dashboard");
 }

@@ -5,6 +5,7 @@ import { LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { login } from "./actions";
 
 const inputClassName =
     "h-9 rounded-lg border border-input bg-background px-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
@@ -20,7 +21,7 @@ export default function LoginPage() {
                     </CardHeader>
 
                     <CardContent>
-                        <form>
+                        <form action={login}>
                             <FieldGroup>
                                 <Field>
                                     <FieldLabel htmlFor="email">Email</FieldLabel>
