@@ -1,26 +1,40 @@
 import { Injectable } from '@nestjs/common';
 import { CreateDoctorDto } from './dto/create-doctor.dto';
 import { UpdateDoctorDto } from './dto/update-doctor.dto';
+import { doctor } from 'src/db/schema';
+import { DbService } from 'src/db/db.service';
 
 @Injectable()
 export class DoctorService {
-  create(createDoctorDto: CreateDoctorDto) {
-    return 'This action adds a new doctor';
-  }
+    constructor(private db: DbService) { }
 
-  findAll() {
-    return `This action returns all doctor`;
-  }
+    async create(dto: CreateDoctorDto) {
+        console.log(dto)
+        const [newDoctor] = await this.db.connection
+            .insert(doctor)
+            .values({
+                acctId: dto.acctId,
+                bio: dto.bio,
+                specialization: dto.specialization,
+                profilePicture: dto.profilePicture
+            })
+            .returning()
+        return newDoctor;
+    }
 
-  findOne(id: number) {
-    return `This action returns a #${id} doctor`;
-  }
+    findAll() {
+        return `This action returns all doctor`;
+    }
 
-  update(id: number, updateDoctorDto: UpdateDoctorDto) {
-    return `This action updates a #${id} doctor`;
-  }
+    findOne(id: number) {
+        return `This action returns a #${id} doctor`;
+    }
 
-  remove(id: number) {
-    return `This action removes a #${id} doctor`;
-  }
+    update(id: number, updateDoctorDto: UpdateDoctorDto) {
+        return `This action updates a #${id} doctor`;
+    }
+
+    remove(id: number) {
+        return `This action removes a #${id} doctor`;
+    }
 }
