@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { type CreateAccountDto } from './dto/create-account.dto';
 import { UpdateAccountDto } from './dto/update-account.dto';
 import { DbService } from 'src/db/db.service';
@@ -11,6 +11,30 @@ export class AccountService {
 
     async create(createAccountDto: CreateAccountDto) {
         return await this.db.connection.insert(account).values(createAccountDto).returning();
+    }
+
+    async register(dto: CreateAccountDto) {
+        const existing = await this.db.connection
+            .select()
+            .from(account)
+            .where(eq(account.email, dto.email))
+            .limit(1);
+
+        if (existing.length > 0) {
+            throw new ConflictException('Email already in use');
+        }
+
+        const [newAccount] = await this.db.connection
+            .insert(account)
+            .values({
+                email: dto.email,
+                password: dto.password,
+                firstName: dto.firstName,
+                lastName: dto.lastName,
+            })
+            .returning();
+
+        return newAccount
     }
 
     findAll() {

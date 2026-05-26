@@ -9,7 +9,7 @@ export class AccountController {
 
   @Post()
   create(@Body() createAccountDto: CreateAccountDto) {
-    return this.accountService.create(createAccountDto);
+    return this.accountService.register(createAccountDto);
   }
 
   @Get()
