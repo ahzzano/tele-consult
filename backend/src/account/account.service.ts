@@ -9,6 +9,10 @@ import { eq } from 'drizzle-orm';
 export class AccountService {
     constructor(private db: DbService) { }
 
+    private optional(value: string | null | undefined) {
+        return value === '' ? null : value;
+    }
+
     async create(createAccountDto: CreateAccountDto) {
         return await this.db.connection.insert(account).values(createAccountDto).returning();
     }
@@ -34,18 +38,27 @@ export class AccountService {
             })
             .returning();
         
-        if(dto.role == AccountRole.DOCTOR) {
-            const [newDoctor] = await this.db.connection
+        if (dto.role == AccountRole.DOCTOR) {
+            await this.db.connection
                 .insert(doctor)
                 .values({
-                    acctId: newAccount.id
+                    acctId: newAccount.id,
+                    bio: this.optional(dto.bio),
+                    specialization: this.optional(dto.specialization),
+                    profilePicture: this.optional(dto.profilePicture),
                 })
                 .returning()
         } else {
-            const [newPatient] = await this.db.connection
+            await this.db.connection
                 .insert(patient)
                 .values({
-                    acctId: newAccount.id
+                    acctId: newAccount.id,
+                    birthday: this.optional(dto.birthday),
+                    weight: this.optional(dto.weight),
+                    height: this.optional(dto.height),
+                    contactDetails: this.optional(dto.contactDetails),
+                    medicalHistory: this.optional(dto.medicalHistory),
+                    profilePicture: this.optional(dto.profilePicture),
                 })
                 .returning()
 
