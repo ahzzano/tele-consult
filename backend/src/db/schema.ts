@@ -10,7 +10,7 @@ export const account = pgTable('account', {
 })
 
 export const doctor = pgTable('doctor', {
-    user: integer("acct_id").primaryKey().references(() => account.id),
+    acctId: integer("acct_id").primaryKey().references(() => account.id),
     bio: text("bio"),
     specialization: text("specialization"),
     profilePicture: text("profile_picture"),
