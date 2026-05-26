@@ -13,7 +13,7 @@ import { ConfigModule } from '@nestjs/config';
         DbModule,
         AccountModule,
         DoctorModule,
-        PatientModule
+        PatientModule,
     ],
     controllers: [AppController],
     providers: [AppService],

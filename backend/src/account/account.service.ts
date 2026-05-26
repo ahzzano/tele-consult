@@ -1,8 +1,8 @@
 import { ConflictException, Injectable } from '@nestjs/common';
-import { type CreateAccountDto } from './dto/create-account.dto';
+import { AccountRole, type CreateAccountDto } from './dto/create-account.dto';
 import { UpdateAccountDto } from './dto/update-account.dto';
 import { DbService } from 'src/db/db.service';
-import { account } from 'src/db/schema';
+import { account, doctor, patient } from 'src/db/schema';
 import { eq } from 'drizzle-orm';
 
 @Injectable()
@@ -33,6 +33,23 @@ export class AccountService {
                 lastName: dto.lastName,
             })
             .returning();
+        
+        if(dto.role == AccountRole.DOCTOR) {
+            const [newDoctor] = await this.db.connection
+                .insert(doctor)
+                .values({
+                    acctId: newAccount.id
+                })
+                .returning()
+        } else {
+            const [newPatient] = await this.db.connection
+                .insert(patient)
+                .values({
+                    acctId: newAccount.id
+                })
+                .returning()
+
+        }
 
         return newAccount
     }

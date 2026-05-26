@@ -1,3 +1,8 @@
+export enum AccountRole {
+    PATIENT = 'Patient',
+    DOCTOR = 'Doctor',
+}
+
 export class CreateAccountDto {
     email: string;
     password: string;
@@ -5,4 +10,5 @@ export class CreateAccountDto {
     lastName: string;
     id?: number | undefined;
     createdAt?: Date | null | undefined
+    role: AccountRole
 }
