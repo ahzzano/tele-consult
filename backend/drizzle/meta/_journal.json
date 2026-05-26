@@ -15,6 +15,13 @@
       "when": 1779783105455,
       "tag": "0001_aromatic_tombstone",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1779803206754,
+      "tag": "0002_fair_bedlam",
+      "breakpoints": true
     }
   ]
 }

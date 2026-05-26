@@ -7,6 +7,7 @@ import { Stethoscope, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { register } from "./actions";
 
 type AccountRole = "Patient" | "Doctor";
 
@@ -29,7 +30,7 @@ export default function RegistrationPage() {
                     </CardHeader>
 
                     <CardContent>
-                        <form>
+                        <form action={register}>
                             <FieldGroup>
                                 <div className="grid grid-cols-2 gap-2 rounded-lg bg-muted p-1">
                                     <input type="hidden" name="role" value={role} />
