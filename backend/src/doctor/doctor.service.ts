@@ -17,7 +17,7 @@ export class DoctorService {
             .limit(1);
 
         if (existing.length > 0) {
-            throw new ConflictException('Email already in use');
+            throw new ConflictException('Doctor profile already created');
         }
 
         const [newDoctor] = await this.db.connection
