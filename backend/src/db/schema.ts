@@ -25,3 +25,14 @@ export const patient = pgTable('patient', {
     medicalHistory: text("medical_history"),
     profilePicture: text("profile_picture"),
 })
+
+
+export type Account = typeof account.$inferSelect;
+export type NewAccount = typeof account.$inferInsert;
+
+export type Doctor = typeof doctor.$inferSelect;
+export type NewDoctor = typeof doctor.$inferInsert;
+
+export type Patient = typeof patient.$inferSelect;
+export type NewPatient = typeof patient.$inferInsert;
+
