@@ -1,15 +1,16 @@
 import { Injectable } from '@nestjs/common';
-import { CreateAccountDto } from './dto/create-account.dto';
+import { type CreateAccountDto } from './dto/create-account.dto';
 import { UpdateAccountDto } from './dto/update-account.dto';
 import { DbService } from 'src/db/db.service';
-import { account, NewAccount } from 'src/db/schema';
+import { account } from 'src/db/schema';
 
 @Injectable()
 export class AccountService {
     constructor(private db: DbService) { }
 
-    async create(data: NewAccount) {
-        return this.db.connection.insert(account).values(data).returning()
+    async create(createAccountDto: CreateAccountDto) {
+        console.log(createAccountDto)
+        return await this.db.connection.insert(account).values(createAccountDto).returning();
     }
 
     findAll() {
