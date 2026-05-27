@@ -18,8 +18,8 @@ export class AccountController {
   }
 
   @Get(':email')
-  findOne(@Param('string') email: string) {
-    return this.accountService.findOne(email);
+  findOne(@Param('email') email: string) {
+    return this.accountService.findProfile(email);
   }
 
   @Patch(':id')

@@ -78,6 +78,33 @@ export class AccountService {
             .where(eq(account.email, email))
     }
 
+    async findProfile(email: string) {
+        const [user] = await this.findOne(email);
+
+        if (!user) {
+            return null;
+        }
+
+        const [doctorProfile] = await this.db.connection
+            .select()
+            .from(doctor)
+            .where(eq(doctor.acctId, user.id));
+
+        const [patientProfile] = await this.db.connection
+            .select()
+            .from(patient)
+            .where(eq(patient.acctId, user.id));
+
+        const { password, ...accountProfile } = user;
+
+        return {
+            ...accountProfile,
+            role: doctorProfile ? AccountRole.DOCTOR : AccountRole.PATIENT,
+            doctorProfile: doctorProfile ?? null,
+            patientProfile: patientProfile ?? null,
+        };
+    }
+
     update(id: number, updateAccountDto: UpdateAccountDto) {
         return `This action updates a #${id} account`;
     }
