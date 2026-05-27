@@ -9,7 +9,7 @@ export class AccountController {
 
   @Post()
   create(@Body() createAccountDto: CreateAccountDto) {
-    return this.accountService.create(createAccountDto);
+    return this.accountService.register(createAccountDto);
   }
 
   @Get()
@@ -17,9 +17,9 @@ export class AccountController {
     return this.accountService.findAll();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.accountService.findOne(+id);
+  @Get(':email')
+  findOne(@Param('email') email: string) {
+    return this.accountService.findProfile(email);
   }
 
   @Patch(':id')

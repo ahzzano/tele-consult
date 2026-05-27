@@ -10,14 +10,14 @@ export const account = pgTable('account', {
 })
 
 export const doctor = pgTable('doctor', {
-    user: integer("acct_id").primaryKey().references(() => account.id),
+    acctId: integer("acct_id").primaryKey().references(() => account.id, { onDelete: "cascade" }),
     bio: text("bio"),
     specialization: text("specialization"),
     profilePicture: text("profile_picture"),
 })
 
 export const patient = pgTable('patient', {
-    acctId: integer("acct_id").primaryKey().references(() => account.id),
+    acctId: integer("acct_id").primaryKey().references(() => account.id, { onDelete: "cascade" }),
     birthday: date("birthday"),
     weight: numeric("weight"),       // in kg
     height: numeric("height"),       // in cm
@@ -26,6 +26,13 @@ export const patient = pgTable('patient', {
     profilePicture: text("profile_picture"),
 })
 
+export const appointmentBlock = pgTable("appointmentBlock", {
+    blockId: serial().primaryKey(),
+	doctorId: integer("doctor_id").notNull(),
+	start: timestamp({ mode: 'string' }).notNull(),
+	end: timestamp({ mode: 'string' }).notNull(),
+	dayOfWeek: integer("day_of_week").notNull(),
+});
 
 export type Account = typeof account.$inferSelect;
 export type NewAccount = typeof account.$inferInsert;
@@ -35,4 +42,3 @@ export type NewDoctor = typeof doctor.$inferInsert;
 
 export type Patient = typeof patient.$inferSelect;
 export type NewPatient = typeof patient.$inferInsert;
-

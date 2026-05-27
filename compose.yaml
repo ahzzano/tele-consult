@@ -21,6 +21,7 @@ services:
     restart: always
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      PORT: 3001
     ports:
       - "3001:3001"
     depends_on:
@@ -31,7 +32,7 @@ services:
     build: ./frontend
     restart: always
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:3001
+      BACKEND_URL: http://backend:3001
     ports:
       - "3000:3000"
     depends_on:
