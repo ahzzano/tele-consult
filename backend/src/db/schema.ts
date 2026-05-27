@@ -26,12 +26,13 @@ export const patient = pgTable('patient', {
     profilePicture: text("profile_picture"),
 })
 
-export const appointmentHours = pgTable('appointmentHour', {
-    acctId: integer('acct_id').primaryKey().references(() => account.id, {onDelete: 'cascade'}),
-    startTime: timestamp('start').notNull(),
-    endTime: timestamp('end').notNull(),
-    day: integer("day_of_week").notNull()
-})
+export const appointmentBlock = pgTable("appointmentBlock", {
+    blockId: serial().primaryKey(),
+	doctorId: integer("doctor_id").notNull(),
+	start: timestamp({ mode: 'string' }).notNull(),
+	end: timestamp({ mode: 'string' }).notNull(),
+	dayOfWeek: integer("day_of_week").notNull(),
+});
 
 export type Account = typeof account.$inferSelect;
 export type NewAccount = typeof account.$inferInsert;

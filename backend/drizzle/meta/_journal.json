@@ -29,6 +29,34 @@
       "when": 1779870725609,
       "tag": "0003_classy_mercury",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1779870889201,
+      "tag": "0004_robust_zodiak",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1779870917105,
+      "tag": "0005_chubby_starhawk",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1779870988874,
+      "tag": "0006_happy_night_nurse",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1779871111213,
+      "tag": "0007_remarkable_mordo",
+      "breakpoints": true
     }
   ]
 }
