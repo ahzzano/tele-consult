@@ -45,10 +45,11 @@ export function DashboardModeSwitcher({
                     <button
                         type="button"
                         aria-pressed={mode === "Patient"}
+                        disabled={profile.role !== "Patient"}
                         onClick={() => setMode("Patient")}
                         className={`${modeButtonClassName} ${mode === "Patient"
                             ? "bg-background text-foreground shadow-sm"
-                            : "text-muted-foreground hover:text-foreground"
+                            : "text-muted-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:text-muted-foreground"
                             }`}
                     >
                         <UserRound className="size-4" />
@@ -57,10 +58,11 @@ export function DashboardModeSwitcher({
                     <button
                         type="button"
                         aria-pressed={mode === "Doctor"}
+                        disabled={profile.role !== "Doctor"}
                         onClick={() => setMode("Doctor")}
                         className={`${modeButtonClassName} ${mode === "Doctor"
                             ? "bg-background text-foreground shadow-sm"
-                            : "text-muted-foreground hover:text-foreground"
+                            : "text-muted-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:text-muted-foreground"
                             }`}
                     >
                         <Stethoscope className="size-4" />
