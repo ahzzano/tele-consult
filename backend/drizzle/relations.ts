@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm/relations";
-import { account, doctor, patient } from "./schema";
+import { account, doctor, patient } from "../src/db/schema";
 
 export const doctorRelations = relations(doctor, ({one}) => ({
 	account: one(account, {
