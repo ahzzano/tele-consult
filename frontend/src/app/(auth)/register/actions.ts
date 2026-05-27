@@ -71,9 +71,12 @@ export async function register(formData: FormData) {
 
     if (!result.success) {
         const errors = z.flattenError(result.error).fieldErrors;
+        const message = Object.entries(errors)
+            .map(([field, messages]) => `${field}: ${messages?.join(", ")}`)
+            .join("; ");
 
         console.log(errors);
-        throw new Error("Invalid registration form");
+        throw new Error(message || "Invalid registration form");
     }
 
     const payload = result.data;

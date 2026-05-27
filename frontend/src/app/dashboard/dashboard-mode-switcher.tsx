@@ -6,6 +6,7 @@ import { CalendarDays, ClipboardList, Stethoscope, UserRound } from "lucide-reac
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { DoctorAvailabilityPlanner } from "./doctor-availability-planner";
 
 type DashboardMode = "Patient" | "Doctor";
 
@@ -122,6 +123,8 @@ function DoctorDashboard() {
                     </div>
                 </CardContent>
             </Card>
+
+            <DoctorAvailabilityPlanner />
         </div>
     );
 }

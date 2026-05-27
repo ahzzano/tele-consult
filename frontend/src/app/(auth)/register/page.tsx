@@ -113,7 +113,7 @@ export default function RegistrationPage() {
                                     <div className="grid gap-4">
                                         <Field>
                                             <FieldLabel htmlFor="specialization">Specialization</FieldLabel>
-                                            <Input id="specialization" name="specialization" autoComplete="organization-title" className={inputClassName} placeholder="Cardiology, pediatrics, dermatology" />
+                                            <Input id="specialization" name="specialization" autoComplete="organization-title" className={inputClassName} placeholder="Cardiology, pediatrics, dermatology" required />
                                         </Field>
                                         <Field>
                                             <FieldLabel htmlFor="bio">Bio</FieldLabel>
