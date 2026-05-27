@@ -32,30 +32,35 @@ export default function RegistrationPage() {
                     <CardContent>
                         <form action={register}>
                             <FieldGroup>
-                                <div className="grid grid-cols-2 gap-2 rounded-lg bg-muted p-1">
+                                <div className="flex flex-col gap-2">
+                                    <FieldLabel>Account Type</FieldLabel>
                                     <input type="hidden" name="role" value={role} />
-                                    <button
-                                        type="button"
-                                        onClick={() => setRole("Patient")}
-                                        className={`flex h-9 items-center justify-center gap-2 rounded-md text-sm font-medium transition-colors ${role === "Patient"
-                                            ? "bg-background text-foreground shadow-sm"
-                                            : "text-muted-foreground hover:text-foreground"
-                                            }`}
-                                    >
-                                        <UserRound className="size-4" />
-                                        Patient
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setRole("Doctor")}
-                                        className={`flex h-9 items-center justify-center gap-2 rounded-md text-sm font-medium transition-colors ${role === "Doctor"
-                                            ? "bg-background text-foreground shadow-sm"
-                                            : "text-muted-foreground hover:text-foreground"
-                                            }`}
-                                    >
-                                        <Stethoscope className="size-4" />
-                                        Doctor
-                                    </button>
+                                    <div className="grid grid-cols-2 gap-2 rounded-lg bg-muted p-1">
+                                        <button
+                                            type="button"
+                                            aria-pressed={role === "Patient"}
+                                            onClick={() => setRole("Patient")}
+                                            className={`flex h-9 items-center justify-center gap-2 rounded-md text-sm font-medium transition-colors ${role === "Patient"
+                                                ? "bg-background text-foreground shadow-sm"
+                                                : "text-muted-foreground hover:text-foreground"
+                                                }`}
+                                        >
+                                            <UserRound className="size-4" />
+                                            Patient
+                                        </button>
+                                        <button
+                                            type="button"
+                                            aria-pressed={role === "Doctor"}
+                                            onClick={() => setRole("Doctor")}
+                                            className={`flex h-9 items-center justify-center gap-2 rounded-md text-sm font-medium transition-colors ${role === "Doctor"
+                                                ? "bg-background text-foreground shadow-sm"
+                                                : "text-muted-foreground hover:text-foreground"
+                                                }`}
+                                        >
+                                            <Stethoscope className="size-4" />
+                                            Doctor
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div className="grid gap-4 sm:grid-cols-2">
