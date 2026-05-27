@@ -7,11 +7,13 @@ import {
   Param,
   Delete,
   Put,
+  Query,
 } from '@nestjs/common';
 import { DoctorService } from './doctor.service';
 import { CreateDoctorDto } from './dto/create-doctor.dto';
 import { UpdateDoctorDto } from './dto/update-doctor.dto';
 import { UpdateAppointmentBlocksDto } from './dto/update-appointment-blocks.dto';
+import { GetDoctorDto } from './dto/get-doctor.dto';
 
 @Controller('doctor')
 export class DoctorController {
@@ -23,8 +25,8 @@ export class DoctorController {
   }
 
   @Get()
-  findAll() {
-    return this.doctorService.findAll();
+  findAll(@Query() getDoctorDto: GetDoctorDto) {
+    return this.doctorService.findAll(getDoctorDto);
   }
 
   @Get(':id')

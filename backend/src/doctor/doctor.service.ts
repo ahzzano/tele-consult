@@ -8,7 +8,8 @@ import { UpdateDoctorDto } from './dto/update-doctor.dto';
 import { UpdateAppointmentBlocksDto } from './dto/update-appointment-blocks.dto';
 import { account, appointmentBlock, doctor } from 'src/db/schema';
 import { DbService } from 'src/db/db.service';
-import { asc, eq } from 'drizzle-orm';
+import { SQL, and, asc, eq, ilike, or } from 'drizzle-orm';
+import { GetDoctorDto } from './dto/get-doctor.dto';
 
 @Injectable()
 export class DoctorService {
@@ -37,17 +38,45 @@ export class DoctorService {
         return newDoctor;
     }
 
-    async findAll() {
-        return await this.db.connection
+    async findAll(getDoctorDto: GetDoctorDto) {
+        const searchTerm = getDoctorDto.name?.trim();
+        const specialization = getDoctorDto.specialization?.trim();
+        const filters: SQL[] = [];
+
+        if (searchTerm) {
+            const searchPattern = `%${searchTerm}%`;
+            const searchFilter = or(
+                ilike(account.firstName, searchPattern),
+                ilike(account.lastName, searchPattern),
+                ilike(doctor.specialization, searchPattern),
+                ilike(doctor.bio, searchPattern),
+            );
+
+            if (searchFilter) {
+                filters.push(searchFilter);
+            }
+        }
+
+        if (specialization && specialization !== 'All') {
+            filters.push(eq(doctor.specialization, specialization));
+        }
+
+        const query = this.db.connection
             .select({
+                id: doctor.acctId,
                 firstName: account.firstName,
                 lastName: account.lastName,
                 specialization: doctor.specialization,
                 bio: doctor.bio
             })
             .from(doctor)
-            .innerJoin(account, eq(doctor.acctId, account.id))
+            .innerJoin(account, eq(doctor.acctId, account.id));
 
+        if (filters.length === 0) {
+            return query;
+        }
+
+        return query.where(and(...filters));
     }
 
     findOne(id: number) {

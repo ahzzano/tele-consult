@@ -1,21 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import {
-    CalendarPlus,
-    CheckCircle2,
-    Clock3,
-    MapPin,
-    Search,
-    SlidersHorizontal,
-    Star,
-    Stethoscope,
-} from "lucide-react";
+import { useEffect, useState } from "react";
+import { Search, SlidersHorizontal, Stethoscope } from "lucide-react";
+import axios from "axios";
 
-import { Button } from "@/components/ui/button";
 import {
     Card,
-    CardAction,
     CardContent,
     CardDescription,
     CardHeader,
@@ -24,82 +14,91 @@ import {
 
 type DoctorSearchResult = {
     id: number;
-    name: string;
-    specialization: string;
-    location: string;
-    rating: number;
-    nextAvailable: string;
-    consultationFee: string;
-    appointmentSlots: string[];
+    firstName: string;
+    lastName: string;
+    specialization: string | null;
+    bio: string | null;
 };
 
-const doctors: DoctorSearchResult[] = [
-    {
-        id: 1,
-        name: "Dr. Maya Reyes",
-        specialization: "Family Medicine",
-        location: "Makati Medical Center",
-        rating: 4.9,
-        nextAvailable: "Today",
-        consultationFee: "P850",
-        appointmentSlots: ["9:00 AM", "10:30 AM", "2:00 PM"],
-    },
-    {
-        id: 2,
-        name: "Dr. Adrian Lim",
-        specialization: "Cardiology",
-        location: "St. Luke's BGC",
-        rating: 4.8,
-        nextAvailable: "Tomorrow",
-        consultationFee: "P1,200",
-        appointmentSlots: ["11:00 AM", "1:30 PM", "4:00 PM"],
-    },
-    {
-        id: 3,
-        name: "Dr. Sofia Tan",
-        specialization: "Dermatology",
-        location: "Online Consultation",
-        rating: 4.7,
-        nextAvailable: "Friday",
-        consultationFee: "P950",
-        appointmentSlots: ["8:30 AM", "12:00 PM", "3:30 PM"],
-    },
-    {
-        id: 4,
-        name: "Dr. Nico Santos",
-        specialization: "Pediatrics",
-        location: "Quezon City Clinic",
-        rating: 4.9,
-        nextAvailable: "Today",
-        consultationFee: "P800",
-        appointmentSlots: ["10:00 AM", "1:00 PM", "5:00 PM"],
-    },
-];
+type ApiResponse<T> = {
+    success: boolean;
+    data: T;
+};
 
-const specializations = ["All", ...Array.from(new Set(doctors.map((doctor) => doctor.specialization)))];
+const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:3000";
+
+function getDoctorName(doctor: DoctorSearchResult) {
+    return `${doctor.firstName} ${doctor.lastName}`;
+}
 
 export function PatientDoctorSearch() {
+    const [doctors, setDoctors] = useState<DoctorSearchResult[]>([]);
+    const [specializations, setSpecializations] = useState<string[]>(["All"]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [query, setQuery] = useState("");
     const [specialization, setSpecialization] = useState("All");
-    const [selectedAppointment, setSelectedAppointment] = useState<{
-        doctorId: number;
-        slot: string;
-    } | null>(null);
 
-    const filteredDoctors = useMemo(() => {
-        const normalizedQuery = query.trim().toLowerCase();
+    useEffect(() => {
+        let isMounted = true;
 
-        return doctors.filter((doctor) => {
-            const matchesSearch =
-                normalizedQuery.length === 0 ||
-                doctor.name.toLowerCase().includes(normalizedQuery) ||
-                doctor.specialization.toLowerCase().includes(normalizedQuery) ||
-                doctor.location.toLowerCase().includes(normalizedQuery);
-            const matchesSpecialization =
-                specialization === "All" || doctor.specialization === specialization;
+        async function loadSpecializations() {
+            try {
+                const response = await axios.get<ApiResponse<DoctorSearchResult[]>>(`${backendUrl}/doctor`);
+                const availableSpecializations = response.data.data
+                    .map((doctor) => doctor.specialization)
+                    .filter((value): value is string => Boolean(value));
 
-            return matchesSearch && matchesSpecialization;
-        });
+                if (isMounted) {
+                    setSpecializations(["All", ...Array.from(new Set(availableSpecializations))]);
+                }
+            } catch {
+                if (isMounted) {
+                    setSpecializations(["All"]);
+                }
+            }
+        }
+
+        void loadSpecializations();
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
+    useEffect(() => {
+        const abortController = new AbortController();
+
+        async function loadDoctors() {
+            try {
+                setIsLoading(true);
+                setErrorMessage(null);
+
+                const response = await axios.get<ApiResponse<DoctorSearchResult[]>>(`${backendUrl}/doctor`, {
+                    params: {
+                        name: query.trim() || undefined,
+                        specialization: specialization === "All" ? undefined : specialization,
+                    },
+                    signal: abortController.signal,
+                });
+
+                setDoctors(Array.isArray(response.data.data) ? response.data.data : []);
+            } catch (error) {
+                if (!axios.isCancel(error)) {
+                    setErrorMessage("Unable to load doctors right now.");
+                }
+            } finally {
+                if (!abortController.signal.aborted) {
+                    setIsLoading(false);
+                }
+            }
+        }
+
+        void loadDoctors();
+
+        return () => {
+            abortController.abort();
+        };
     }, [query, specialization]);
 
     return (
@@ -140,7 +139,23 @@ export function PatientDoctorSearch() {
             </Card>
 
             <div className="grid gap-4">
-                {filteredDoctors.map((doctor) => (
+                {isLoading ? (
+                    <Card>
+                        <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                            Loading doctors...
+                        </CardContent>
+                    </Card>
+                ) : null}
+
+                {errorMessage ? (
+                    <Card>
+                        <CardContent className="py-8 text-center text-sm text-destructive">
+                            {errorMessage}
+                        </CardContent>
+                    </Card>
+                ) : null}
+
+                {doctors.map((doctor) => (
                     <Card key={doctor.id}>
                         <CardHeader>
                             <div className="flex items-start gap-3">
@@ -148,64 +163,22 @@ export function PatientDoctorSearch() {
                                     <Stethoscope className="size-5 text-muted-foreground" />
                                 </div>
                                 <div className="min-w-0">
-                                    <CardTitle>{doctor.name}</CardTitle>
-                                    <CardDescription>{doctor.specialization}</CardDescription>
+                                    <CardTitle>{getDoctorName(doctor)}</CardTitle>
+                                    <CardDescription>
+                                        {doctor.specialization ?? "General practice"}
+                                    </CardDescription>
                                 </div>
                             </div>
-                            <CardAction className="flex items-center gap-1 text-sm text-muted-foreground">
-                                <Star className="size-4 fill-current text-amber-500" />
-                                {doctor.rating.toFixed(1)}
-                            </CardAction>
                         </CardHeader>
                         <CardContent className="flex flex-col gap-4">
-                            <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-3">
-                                <span className="flex items-center gap-2">
-                                    <MapPin className="size-4" />
-                                    {doctor.location}
-                                </span>
-                                <span className="flex items-center gap-2">
-                                    <Clock3 className="size-4" />
-                                    {doctor.nextAvailable}
-                                </span>
-                                <span className="font-medium text-foreground">
-                                    {doctor.consultationFee}
-                                </span>
-                            </div>
-
-                            <div className="flex flex-wrap gap-2">
-                                {doctor.appointmentSlots.map((slot) => {
-                                    const isSelected =
-                                        selectedAppointment?.doctorId === doctor.id &&
-                                        selectedAppointment.slot === slot;
-
-                                    return (
-                                        <Button
-                                            key={slot}
-                                            type="button"
-                                            variant={isSelected ? "default" : "outline"}
-                                            size="sm"
-                                            onClick={() =>
-                                                setSelectedAppointment({
-                                                    doctorId: doctor.id,
-                                                    slot,
-                                                })
-                                            }
-                                        >
-                                            {isSelected ? (
-                                                <CheckCircle2 className="size-4" />
-                                            ) : (
-                                                <CalendarPlus className="size-4" />
-                                            )}
-                                            {slot}
-                                        </Button>
-                                    );
-                                })}
-                            </div>
+                            <p className="text-sm text-muted-foreground">
+                                {doctor.bio ?? "No bio provided yet."}
+                            </p>
                         </CardContent>
                     </Card>
                 ))}
 
-                {filteredDoctors.length === 0 ? (
+                {!isLoading && !errorMessage && doctors.length === 0 ? (
                     <Card>
                         <CardContent className="py-8 text-center text-sm text-muted-foreground">
                             No doctors matched your search.
