@@ -26,6 +26,11 @@ export const patient = pgTable('patient', {
     profilePicture: text("profile_picture"),
 })
 
+export const appointmentHours = pgTable('appointmentHour', {
+    acctId: integer('acct_id').primaryKey().references(() => account.id, {onDelete: 'cascade'}),
+    startTime: timestamp('start').notNull(),
+    endTime: timestamp('end').notNull()
+})
 
 export type Account = typeof account.$inferSelect;
 export type NewAccount = typeof account.$inferInsert;
