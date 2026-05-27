@@ -10,6 +10,7 @@ import {
     DoctorAvailabilityPlanner,
     type AppointmentBlock,
 } from "./doctor-availability-planner";
+import { PatientDoctorSearch } from "./patient-doctor-search";
 
 type DashboardMode = "Patient" | "Doctor";
 
@@ -86,32 +87,36 @@ export function DashboardModeSwitcher({
 
 function PatientDashboard() {
     return (
-        <div className="grid gap-4 md:grid-cols-2">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Upcoming Consultation</CardTitle>
-                    <CardDescription>Your next appointment schedule.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex items-center gap-3 text-sm">
-                        <CalendarDays className="size-5 text-muted-foreground" />
-                        <span>No upcoming consultation scheduled.</span>
-                    </div>
-                </CardContent>
-            </Card>
+        <div className="grid gap-4">
+            <div className="grid gap-4 md:grid-cols-2">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Upcoming Consultation</CardTitle>
+                        <CardDescription>Your next appointment schedule.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="flex items-center gap-3 text-sm">
+                            <CalendarDays className="size-5 text-muted-foreground" />
+                            <span>No upcoming consultation scheduled.</span>
+                        </div>
+                    </CardContent>
+                </Card>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Medical Summary</CardTitle>
-                    <CardDescription>Patient details available to your doctor.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex items-center gap-3 text-sm">
-                        <ClipboardList className="size-5 text-muted-foreground" />
-                        <span>Complete your profile to improve consultation context.</span>
-                    </div>
-                </CardContent>
-            </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Medical Summary</CardTitle>
+                        <CardDescription>Patient details available to your doctor.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="flex items-center gap-3 text-sm">
+                            <ClipboardList className="size-5 text-muted-foreground" />
+                            <span>Complete your profile to improve consultation context.</span>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            <PatientDoctorSearch />
         </div>
     );
 }
