@@ -4,6 +4,8 @@ import { useState } from "react";
 import { CalendarDays, ClipboardList, Stethoscope, UserRound } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 type DashboardMode = "Patient" | "Doctor";
 
@@ -49,8 +51,12 @@ export function DashboardModeSwitcher() {
                         Doctor
                     </button>
                 </div>
+                <div>
+                    <Button variant="link">
+                        <Link href="/profile">Profile</Link>
+                    </Button>
+                </div>
             </div>
-
             {mode === "Patient" ? <PatientDashboard /> : <DoctorDashboard />}
         </div>
     );
