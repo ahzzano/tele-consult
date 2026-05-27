@@ -1,7 +1,7 @@
 "use client";
 
 import type { PointerEvent as ReactPointerEvent } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { CalendarClock, RotateCcw, Save } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -13,10 +13,23 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import {
+    updateDoctorAppointmentBlocks,
+    type AppointmentBlockPayload,
+    type AvailabilityActionState,
+} from "./actions";
 
 type DayKey = "sun" | "mon" | "tue" | "wed" | "thu" | "fri" | "sat";
 
 type Availability = Record<DayKey, boolean[]>;
+
+export type AppointmentBlock = {
+    blockId: number;
+    doctorId: number;
+    dayOfWeek: number;
+    start: string;
+    end: string;
+};
 
 type DragState = {
     dayIndex: number;
@@ -24,8 +37,6 @@ type DragState = {
     endSlot: number;
     shouldSelect: boolean;
 };
-
-const storageKey = "tele-consult.doctor.consultation-hours";
 
 const days: Array<{ key: DayKey; label: string; shortLabel: string }> = [
     { key: "sun", label: "Sunday", shortLabel: "Sun" },
@@ -42,6 +53,7 @@ const endHour = 22;
 const slotMinutes = 30;
 const slotsPerHour = 60 / slotMinutes;
 const slotCount = (endHour - startHour) * slotsPerHour;
+const baseSunday = "2000-01-02";
 
 function createEmptyAvailability(): Availability {
     return days.reduce((availability, day) => {
@@ -58,6 +70,40 @@ function formatTime(slotIndex: number) {
     const displayHour = hours % 12 || 12;
 
     return `${displayHour}:${minutes.toString().padStart(2, "0")} ${suffix}`;
+}
+
+function formatTimestamp(dayOfWeek: number, slotIndex: number) {
+    const totalMinutes = startHour * 60 + slotIndex * slotMinutes;
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    const date = new Date(`${baseSunday}T00:00:00`);
+    date.setDate(date.getDate() + dayOfWeek);
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const hour = String(hours).padStart(2, "0");
+    const minute = String(minutes).padStart(2, "0");
+
+    return `${year}-${month}-${day} ${hour}:${minute}:00`;
+}
+
+function getSlotIndexFromTimestamp(timestamp: string) {
+    const timeMatch = timestamp.match(/(?:T|\s)(\d{2}):(\d{2})/);
+
+    if (!timeMatch) {
+        return null;
+    }
+
+    const [, hours, minutes] = timeMatch;
+    const totalMinutes = Number(hours) * 60 + Number(minutes);
+    const slotIndex = (totalMinutes - startHour * 60) / slotMinutes;
+
+    if (!Number.isInteger(slotIndex) || slotIndex < 0 || slotIndex > slotCount) {
+        return null;
+    }
+
+    return slotIndex;
 }
 
 function getDayRanges(daySlots: boolean[]) {
@@ -81,34 +127,6 @@ function getDayRanges(daySlots: boolean[]) {
     return ranges;
 }
 
-function getSavedAvailability() {
-    if (typeof window === "undefined") {
-        return createEmptyAvailability();
-    }
-
-    const saved = window.localStorage.getItem(storageKey);
-
-    if (!saved) {
-        return createEmptyAvailability();
-    }
-
-    try {
-        const parsed = JSON.parse(saved) as Partial<Availability>;
-        const fallback = createEmptyAvailability();
-
-        return days.reduce((availability, day) => {
-            const slots = parsed[day.key];
-            availability[day.key] =
-                Array.isArray(slots) && slots.length === slotCount
-                    ? slots.map(Boolean)
-                    : fallback[day.key];
-            return availability;
-        }, {} as Availability);
-    } catch {
-        return createEmptyAvailability();
-    }
-}
-
 function applyDragSelection(availability: Availability, drag: DragState) {
     const draft: Availability = {
         sun: [...availability.sun],
@@ -130,6 +148,36 @@ function applyDragSelection(availability: Availability, drag: DragState) {
     return draft;
 }
 
+function createAvailabilityFromBlocks(appointmentBlocks: AppointmentBlock[]) {
+    const availability = createEmptyAvailability();
+
+    appointmentBlocks.forEach((block) => {
+        const day = days[block.dayOfWeek];
+        const startSlot = getSlotIndexFromTimestamp(block.start);
+        const endSlot = getSlotIndexFromTimestamp(block.end);
+
+        if (!day || startSlot === null || endSlot === null || startSlot >= endSlot) {
+            return;
+        }
+
+        for (let slot = startSlot; slot < endSlot; slot += 1) {
+            availability[day.key][slot] = true;
+        }
+    });
+
+    return availability;
+}
+
+function createBlocksFromAvailability(availability: Availability): AppointmentBlockPayload[] {
+    return days.flatMap((day, dayOfWeek) =>
+        getDayRanges(availability[day.key]).map((range) => ({
+            dayOfWeek,
+            start: formatTimestamp(dayOfWeek, range.start),
+            end: formatTimestamp(dayOfWeek, range.end),
+        })),
+    );
+}
+
 function getCellFromPoint(event: PointerEvent | ReactPointerEvent<HTMLElement>) {
     const target = document.elementFromPoint(event.clientX, event.clientY);
 
@@ -140,18 +188,21 @@ function getCellFromPoint(event: PointerEvent | ReactPointerEvent<HTMLElement>) 
     return target.closest<HTMLElement>("[data-day-index][data-slot-index]");
 }
 
-export function DoctorAvailabilityPlanner() {
-    const [availability, setAvailability] = useState<Availability>(() => createEmptyAvailability());
+export function DoctorAvailabilityPlanner({
+    doctorId,
+    initialAppointmentBlocks,
+}: {
+    doctorId: number | null;
+    initialAppointmentBlocks: AppointmentBlock[];
+}) {
+    const [availability, setAvailability] = useState<Availability>(() =>
+        createAvailabilityFromBlocks(initialAppointmentBlocks),
+    );
     const [drag, setDrag] = useState<DragState | null>(null);
-    const [savedAt, setSavedAt] = useState<string | null>(null);
-
-    useEffect(() => {
-        const timeoutId = window.setTimeout(() => {
-            setAvailability(getSavedAvailability());
-        }, 0);
-
-        return () => window.clearTimeout(timeoutId);
-    }, []);
+    const [actionState, setActionState] = useState<AvailabilityActionState>({
+        status: "idle",
+    });
+    const [isPending, startTransition] = useTransition();
 
     useEffect(() => {
         if (!drag) {
@@ -227,20 +278,26 @@ export function DoctorAvailabilityPlanner() {
     }
 
     function handleSave() {
-        window.localStorage.setItem(storageKey, JSON.stringify(availability));
-        setSavedAt(
-            new Intl.DateTimeFormat("en", {
-                hour: "numeric",
-                minute: "2-digit",
-            }).format(new Date()),
-        );
+        if (!doctorId) {
+            setActionState({
+                status: "error",
+                message: "Only doctor accounts can save consultation hours.",
+            });
+            return;
+        }
+
+        startTransition(async () => {
+            const result = await updateDoctorAppointmentBlocks(
+                doctorId,
+                createBlocksFromAvailability(availability),
+            );
+            setActionState(result);
+        });
     }
 
     function handleReset() {
-        const emptyAvailability = createEmptyAvailability();
-        window.localStorage.setItem(storageKey, JSON.stringify(emptyAvailability));
-        setAvailability(emptyAvailability);
-        setSavedAt(null);
+        setAvailability(createEmptyAvailability());
+        setActionState({ status: "idle" });
     }
 
     return (
@@ -261,9 +318,9 @@ export function DoctorAvailabilityPlanner() {
                         <RotateCcw className="size-4" />
                         Reset
                     </Button>
-                    <Button type="button" onClick={handleSave}>
+                    <Button type="button" onClick={handleSave} disabled={isPending || !doctorId}>
                         <Save className="size-4" />
-                        Save draft
+                        {isPending ? "Saving" : "Save"}
                     </Button>
                 </div>
             </CardHeader>
@@ -273,7 +330,18 @@ export function DoctorAvailabilityPlanner() {
                     <span className="rounded-md bg-emerald-50 px-2 py-1 font-medium text-emerald-800 ring-1 ring-emerald-200">
                         {totalHours.toFixed(totalHours % 1 === 0 ? 0 : 1)} hours weekly
                     </span>
-                    {savedAt ? <span>Draft saved at {savedAt}</span> : <span>Unsaved draft</span>}
+                    {actionState.message ? (
+                        <span
+                            className={cn(
+                                actionState.status === "error" && "text-destructive",
+                                actionState.status === "success" && "text-emerald-700",
+                            )}
+                        >
+                            {actionState.message}
+                        </span>
+                    ) : (
+                        <span>Unsaved changes</span>
+                    )}
                 </div>
 
                 <div className="overflow-x-auto rounded-lg border bg-background">

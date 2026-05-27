@@ -6,15 +6,29 @@ import { CalendarDays, ClipboardList, Stethoscope, UserRound } from "lucide-reac
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { DoctorAvailabilityPlanner } from "./doctor-availability-planner";
+import {
+    DoctorAvailabilityPlanner,
+    type AppointmentBlock,
+} from "./doctor-availability-planner";
 
 type DashboardMode = "Patient" | "Doctor";
+
+type DashboardModeSwitcherProps = {
+    profile: {
+        id: number;
+        role: DashboardMode;
+    };
+    appointmentBlocks: AppointmentBlock[];
+};
 
 const modeButtonClassName =
     "flex h-9 items-center justify-center gap-2 rounded-md text-sm font-medium transition-colors";
 
-export function DashboardModeSwitcher() {
-    const [mode, setMode] = useState<DashboardMode>("Patient");
+export function DashboardModeSwitcher({
+    profile,
+    appointmentBlocks,
+}: DashboardModeSwitcherProps) {
+    const [mode, setMode] = useState<DashboardMode>(profile.role);
 
     return (
         <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 sm:p-6">
@@ -58,7 +72,14 @@ export function DashboardModeSwitcher() {
                     </Button>
                 </div>
             </div>
-            {mode === "Patient" ? <PatientDashboard /> : <DoctorDashboard />}
+            {mode === "Patient" ? (
+                <PatientDashboard />
+            ) : (
+                <DoctorDashboard
+                    doctorId={profile.role === "Doctor" ? profile.id : null}
+                    appointmentBlocks={appointmentBlocks}
+                />
+            )}
         </div>
     );
 }
@@ -95,7 +116,13 @@ function PatientDashboard() {
     );
 }
 
-function DoctorDashboard() {
+function DoctorDashboard({
+    doctorId,
+    appointmentBlocks,
+}: {
+    doctorId: number | null;
+    appointmentBlocks: AppointmentBlock[];
+}) {
     return (
         <div className="grid gap-4 md:grid-cols-2">
             <Card>
@@ -124,7 +151,10 @@ function DoctorDashboard() {
                 </CardContent>
             </Card>
 
-            <DoctorAvailabilityPlanner />
+            <DoctorAvailabilityPlanner
+                doctorId={doctorId}
+                initialAppointmentBlocks={appointmentBlocks}
+            />
         </div>
     );
 }
