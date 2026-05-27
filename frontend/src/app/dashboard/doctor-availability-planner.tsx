@@ -366,18 +366,28 @@ export function DoctorAvailabilityPlanner({
                             onPointerMove={handlePointerMove}
                             style={{ touchAction: "none" }}
                         >
+                            <div className="h-4" />
+                            {days.map((day) => (
+                                <div
+                                    key={`${day.key}-top-spacer`}
+                                    aria-hidden="true"
+                                    className="h-4 border-l bg-background"
+                                />
+                            ))}
+
                             {Array.from({ length: slotCount }).map((_, slotIndex) => {
                                 const showTime = slotIndex % slotsPerHour === 0;
 
                                 return (
                                     <div key={slotIndex} className="contents">
                                         <div
-                                            className={cn(
-                                                "flex h-8 items-start justify-end border-t px-2 pt-1 text-xs text-muted-foreground",
-                                                !showTime && "text-transparent",
-                                            )}
+                                            className="relative h-8 border-t text-xs text-muted-foreground"
                                         >
-                                            {formatTime(slotIndex)}
+                                            {showTime ? (
+                                                <span className="absolute right-2 top-0 -translate-y-1/2 bg-background px-1">
+                                                    {formatTime(slotIndex)}
+                                                </span>
+                                            ) : null}
                                         </div>
 
                                         {days.map((day, dayIndex) => {
