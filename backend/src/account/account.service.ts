@@ -1,4 +1,4 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { AccountRole, type CreateAccountDto } from './dto/create-account.dto';
 import { UpdateAccountDto } from './dto/update-account.dto';
 import { DbService } from 'src/db/db.service';
@@ -105,8 +105,65 @@ export class AccountService {
         };
     }
 
-    update(id: number, updateAccountDto: UpdateAccountDto) {
-        return `This action updates a #${id} account`;
+    async update(id: number, dto: UpdateAccountDto) {
+        const [existingAccount] = await this.db.connection
+            .select()
+            .from(account)
+            .where(eq(account.id, id))
+            .limit(1);
+
+        if (!existingAccount) {
+            throw new NotFoundException('Account not found');
+        }
+
+        if (dto.email && dto.email !== existingAccount.email) {
+            const existingEmail = await this.db.connection
+                .select()
+                .from(account)
+                .where(eq(account.email, dto.email))
+                .limit(1);
+
+            if (existingEmail.length > 0) {
+                throw new ConflictException('Email already in use');
+            }
+        }
+
+        await this.db.connection
+            .update(account)
+            .set({
+                email: dto.email,
+                firstName: dto.firstName,
+                lastName: dto.lastName,
+                password: dto.password,
+            })
+            .where(eq(account.id, id));
+
+        if (dto.role === AccountRole.DOCTOR) {
+            await this.db.connection
+                .update(doctor)
+                .set({
+                    bio: this.optional(dto.bio),
+                    specialization: this.optional(dto.specialization),
+                    profilePicture: this.optional(dto.profilePicture),
+                })
+                .where(eq(doctor.acctId, id));
+        }
+
+        if (dto.role === AccountRole.PATIENT) {
+            await this.db.connection
+                .update(patient)
+                .set({
+                    birthday: this.optional(dto.birthday),
+                    weight: this.optional(dto.weight),
+                    height: this.optional(dto.height),
+                    contactDetails: this.optional(dto.contactDetails),
+                    medicalHistory: this.optional(dto.medicalHistory),
+                    profilePicture: this.optional(dto.profilePicture),
+                })
+                .where(eq(patient.acctId, id));
+        }
+
+        return this.findProfile(dto.email ?? existingAccount.email);
     }
 
     remove(id: number) {
