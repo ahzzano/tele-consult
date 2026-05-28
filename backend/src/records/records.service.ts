@@ -10,18 +10,6 @@ export class RecordsService {
     constructor(private dbService: DbService) { }
 
     async create(createRecordDto: CreateRecordDto) {
-        await this.ensureDoctorAndPatientExist(
-            createRecordDto.doctor,
-            createRecordDto.patient,
-        );
-
-        return await this.dbService.connection
-            .insert(medicalRecord)
-            .values(createRecordDto)
-            .returning()
-    }
-
-    private async ensureDoctorAndPatientExist(doctorId: number, patientId: number) {
         const [existingDoctor] = await this.dbService.connection
             .select()
             .from(doctor)
@@ -41,6 +29,11 @@ export class RecordsService {
         if (!existingPatient) {
             throw new NotFoundException('Patient not found');
         }
+
+        return await this.dbService.connection
+            .insert(medicalRecord)
+            .values(createRecordDto)
+            .returning()
     }
 
     findAll() {
