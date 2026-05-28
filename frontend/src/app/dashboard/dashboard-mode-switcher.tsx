@@ -11,6 +11,13 @@ import {
     type AppointmentBlock,
 } from "./doctor-availability-planner";
 import { PatientDoctorSearch } from "./patient-doctor-search";
+import {
+    formatAppointmentTime,
+    getDoctorName,
+    getPatientName,
+    PatientAppointments,
+} from "./appointment-management";
+import type { Appointment } from "./dashboard-types";
 
 type DashboardMode = "Patient" | "Doctor";
 
@@ -21,20 +28,6 @@ type DashboardModeSwitcherProps = {
     };
     appointmentBlocks: AppointmentBlock[];
     appointments: Appointment[];
-};
-
-type Appointment = {
-    appointmentId: number;
-    doctorId: number;
-    patientId: number;
-    timeslot: string;
-    day: number;
-    doctorFirstName?: string | null;
-    doctorLastName?: string | null;
-    doctorName?: string | null;
-    patientFirstName?: string | null;
-    patientLastName?: string | null;
-    patientName?: string | null;
 };
 
 const modeButtonClassName =
@@ -104,37 +97,6 @@ export function DashboardModeSwitcher({
     );
 }
 
-function formatAppointmentTime(timeslot: string) {
-    return new Intl.DateTimeFormat("en", {
-        dateStyle: "medium",
-        timeStyle: "short",
-    }).format(new Date(timeslot));
-}
-
-function getDoctorName(appointment: Appointment) {
-    if (appointment.doctorName) {
-        return appointment.doctorName;
-    }
-
-    const name = [appointment.doctorFirstName, appointment.doctorLastName]
-        .filter(Boolean)
-        .join(" ");
-
-    return name || `doctor #${appointment.doctorId}`;
-}
-
-function getPatientName(appointment: Appointment) {
-    if (appointment.patientName) {
-        return appointment.patientName;
-    }
-
-    const name = [appointment.patientFirstName, appointment.patientLastName]
-        .filter(Boolean)
-        .join(" ");
-
-    return name || `patient #${appointment.patientId}`;
-}
-
 function PatientDashboard({
     patientId,
     appointments,
@@ -178,6 +140,7 @@ function PatientDashboard({
                 </Card>
             </div>
 
+            <PatientAppointments appointments={appointments} />
             <PatientDoctorSearch patientId={patientId} />
         </div>
     );

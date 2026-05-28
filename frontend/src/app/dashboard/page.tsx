@@ -2,6 +2,8 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { DashboardModeSwitcher } from "./dashboard-mode-switcher";
+import type { AppointmentBlock } from "./appointment-schedule";
+import type { Appointment } from "./dashboard-types";
 
 type AuthTokenPayload = {
     email?: string;
@@ -10,28 +12,6 @@ type AuthTokenPayload = {
 type AccountProfile = {
     id: number;
     role: "Patient" | "Doctor";
-};
-
-type AppointmentBlock = {
-    blockId: number;
-    doctorId: number;
-    dayOfWeek: number;
-    start: string;
-    end: string;
-};
-
-type Appointment = {
-    appointmentId: number;
-    doctorId: number;
-    patientId: number;
-    timeslot: string;
-    day: number;
-    doctorFirstName?: string | null;
-    doctorLastName?: string | null;
-    doctorName?: string | null;
-    patientFirstName?: string | null;
-    patientLastName?: string | null;
-    patientName?: string | null;
 };
 
 type ApiResponse<T> = {

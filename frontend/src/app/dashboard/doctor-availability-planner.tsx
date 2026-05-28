@@ -19,18 +19,13 @@ import {
     type AppointmentBlockPayload,
     type AvailabilityActionState,
 } from "./actions";
+import type { AppointmentBlock } from "./appointment-schedule";
+
+export type { AppointmentBlock } from "./appointment-schedule";
 
 type DayKey = "sun" | "mon" | "tue" | "wed" | "thu" | "fri" | "sat";
 
 type Availability = Record<DayKey, boolean[]>;
-
-export type AppointmentBlock = {
-    blockId: number;
-    doctorId: number;
-    dayOfWeek: number;
-    start: string;
-    end: string;
-};
 
 type DragState = {
     dayIndex: number;
