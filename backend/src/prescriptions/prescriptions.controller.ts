@@ -13,22 +13,26 @@ export class PrescriptionsController {
     }
 
     @Get()
-    findAll() {
-        return this.prescriptionsService.findAll();
+    async findAll(@Query() query: {
+        doctor?: number,
+        patient?: number,
+        record?: number
+    }) {
+        return await this.prescriptionsService.findAll(query);
     }
 
-    @Get()
-    findOne(@Param('id') id: string) {
-        return this.prescriptionsService.findOne(+id);
+    @Get(':id')
+    async findOne(@Param('id') id: string) {
+        return await this.prescriptionsService.findOne(+id);
     }
 
     @Patch(':id')
-    update(@Param('id') id: string, @Body() updatePrescriptionDto: UpdatePrescriptionDto) {
-        return this.prescriptionsService.update(+id, updatePrescriptionDto);
+    async update(@Param('id') id: string, @Body() updatePrescriptionDto: UpdatePrescriptionDto) {
+        return await this.prescriptionsService.update(+id, updatePrescriptionDto);
     }
 
     @Delete(':id')
-    remove(@Param('id') id: string) {
-        return this.prescriptionsService.remove(+id);
+    async remove(@Param('id') id: string) {
+        return await this.prescriptionsService.remove(+id);
     }
 }

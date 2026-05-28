@@ -128,13 +128,18 @@ export class AccountService {
             }
         }
 
+        const { password, ...accountFields } = {
+            email: dto.email,
+            firstName: dto.firstName,
+            lastName: dto.lastName,
+            password: dto.password,
+        };
+
         await this.db.connection
             .update(account)
             .set({
-                email: dto.email,
-                firstName: dto.firstName,
-                lastName: dto.lastName,
-                password: dto.password,
+                ...accountFields,
+                ...(password ? { password } : {}),
             })
             .where(eq(account.id, id));
 

@@ -35,6 +35,7 @@ export const appointmentBlock = pgTable("appointmentBlock", {
 	dayOfWeek: integer("day_of_week").notNull(),
 });
 
+// One hour appointment with patient
 export const appointment = pgTable("appointment", {
     appointmentId: serial().primaryKey(),
     doctorId: integer('doctor_id').notNull(),
@@ -49,7 +50,7 @@ export const medicalRecord = pgTable('medicalRecord', {
     doctor: integer('doctor').notNull().references(() => doctor.acctId),
     diagnosis: text('diagnosis'),
     summary: text('summary'),
-    followUpInstructions: text('summary'),
+    followUpInstructions: text('followUpInstructions'),
     createdAt: timestamp('created_at').defaultNow()
 })
 

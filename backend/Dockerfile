@@ -19,4 +19,4 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/drizzle ./drizzle
 COPY --from=builder /app/node_modules ./node_modules
 EXPOSE 3001
-CMD ["sh", "-c", "node dist/db/migrate.js && node dist/main"]
+CMD ["node", "dist/main"]
