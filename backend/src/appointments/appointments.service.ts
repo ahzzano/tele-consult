@@ -1,6 +1,7 @@
 import {
     BadRequestException,
     ConflictException,
+    ForbiddenException,
     Injectable,
     NotFoundException,
 } from '@nestjs/common';
@@ -19,7 +20,11 @@ const APPOINTMENT_DURATION_MINUTES = 90;
 export class AppointmentsService {
     constructor(private db: DbService) {}
 
-    async create(createAppointmentDto: CreateAppointmentDto) {
+    async create(createAppointmentDto: CreateAppointmentDto, actorId?: number) {
+        if (actorId !== undefined && actorId !== createAppointmentDto.patientId) {
+            throw new ForbiddenException('Patients can only book their own appointments');
+        }
+
         await this.validateBookableAppointment({
             doctorId: createAppointmentDto.doctorId,
             patientId: createAppointmentDto.patientId,
@@ -40,17 +45,36 @@ export class AppointmentsService {
         return newAppointment;
     }
 
-    async findAll(getAppointmentDto: GetAppontmentDto) {
+    async findAll(getAppointmentDto: GetAppontmentDto, actorId?: number) {
         const conditions: SQL[] = [];
         const doctorAccount = aliasedTable(account, 'doctorAccount');
         const patientAccount = aliasedTable(account, 'patientAccount');
 
         if(getAppointmentDto.patient)  {
+            if (actorId !== undefined && Number(getAppointmentDto.patient) !== actorId) {
+                throw new ForbiddenException('You can only view your own appointments');
+            }
+
             conditions.push(eq(appointment.patientId, Number(getAppointmentDto.patient)));
         }
 
         if(getAppointmentDto.doctor) {
+            if (actorId !== undefined && Number(getAppointmentDto.doctor) !== actorId) {
+                throw new ForbiddenException('You can only view your own appointments');
+            }
+
             conditions.push(eq(appointment.doctorId, Number(getAppointmentDto.doctor)));
+        }
+
+        if (actorId !== undefined && !getAppointmentDto.patient && !getAppointmentDto.doctor) {
+            const ownAppointmentsFilter = or(
+                eq(appointment.patientId, actorId),
+                eq(appointment.doctorId, actorId),
+            );
+
+            if (ownAppointmentsFilter) {
+                conditions.push(ownAppointmentsFilter);
+            }
         }
 
         const query = this.db.connection
@@ -76,8 +100,9 @@ export class AppointmentsService {
         return query.where(and(...conditions));
     }
 
-    async update(id: number, updateAppointmentDto: UpdateAppointmentDto) {
+    async update(id: number, updateAppointmentDto: UpdateAppointmentDto, actorId?: number) {
         this.validateAppointmentId(id);
+        await this.ensureAppointmentActor(id, actorId);
 
         const values: Partial<typeof appointment.$inferInsert> = {};
 
@@ -107,8 +132,10 @@ export class AppointmentsService {
     async reschedule(
         id: number,
         rescheduleAppointmentDto: RescheduleAppointmentDto,
+        actorId?: number,
     ) {
         this.validateAppointmentId(id);
+        await this.ensureAppointmentActor(id, actorId);
         this.validateTimeslot(rescheduleAppointmentDto.timeslot);
         this.validateDayOfWeek(rescheduleAppointmentDto.dayOfWeek);
 
@@ -123,7 +150,10 @@ export class AppointmentsService {
         });
     }
 
-    async remove(id: number) {
+    async remove(id: number, actorId?: number) {
+        this.validateAppointmentId(id);
+        await this.ensureAppointmentActor(id, actorId);
+
         return await this.db.connection
             .delete(appointment)
             .where(eq(appointment.appointmentId, id))
@@ -154,6 +184,29 @@ export class AppointmentsService {
     private validateAppointmentId(id: number) {
         if (!Number.isInteger(id) || id <= 0) {
             throw new BadRequestException('Appointment id must be a positive integer');
+        }
+    }
+
+    private async ensureAppointmentActor(id: number, actorId?: number) {
+        if (actorId === undefined) {
+            return;
+        }
+
+        const [existingAppointment] = await this.db.connection
+            .select()
+            .from(appointment)
+            .where(eq(appointment.appointmentId, id))
+            .limit(1);
+
+        if (!existingAppointment) {
+            throw new NotFoundException('Appointment not found');
+        }
+
+        if (
+            existingAppointment.patientId !== actorId &&
+            existingAppointment.doctorId !== actorId
+        ) {
+            throw new ForbiddenException('You can only manage your own appointments');
         }
     }
 

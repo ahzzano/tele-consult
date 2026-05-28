@@ -46,6 +46,7 @@ export const appointment = pgTable("appointment", {
 
 export const medicalRecord = pgTable('medicalRecord', {
     id: serial('id').primaryKey(),
+    appointmentId: integer('appointment_id').references(() => appointment.appointmentId),
     patient: integer('patient').notNull().references(() => patient.acctId),
     doctor: integer('doctor').notNull().references(() => doctor.acctId),
     diagnosis: text('diagnosis'),

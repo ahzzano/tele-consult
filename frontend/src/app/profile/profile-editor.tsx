@@ -48,6 +48,7 @@ export type AccountProfile = {
 
 type MedicalRecord = {
     id: number;
+    appointmentId?: number | null;
     patient: number;
     doctor: number;
     diagnosis?: string | null;

@@ -17,13 +17,15 @@ export class AccountService {
     }
 
     async create(createAccountDto: CreateAccountDto) {
-        return await this.db.connection
+        const [newAccount] = await this.db.connection
             .insert(account)
             .values({
                 ...createAccountDto,
                 password: await this.hashPassword(createAccountDto.password),
             })
             .returning();
+
+        return this.withoutPassword(newAccount);
     }
 
     async register(dto: CreateAccountDto) {
@@ -73,7 +75,7 @@ export class AccountService {
 
         }
 
-        return newAccount
+        return this.withoutPassword(newAccount)
     }
 
     findAll() {
@@ -186,5 +188,10 @@ export class AccountService {
 
     private async hashPassword(password: string) {
         return bcrypt.hash(password, SALT_ROUNDS);
+    }
+
+    private withoutPassword(user: typeof account.$inferSelect) {
+        const { password, ...safeUser } = user;
+        return safeUser;
     }
 }

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { z } from "zod";
 
 const appointmentBlockSchema = z.object({
@@ -31,6 +32,8 @@ export async function updateDoctorAppointmentBlocks(
         throw new Error("BACKEND_URL is not configured");
     }
 
+    const token = (await cookies()).get("auth_token")?.value;
+
     const result = appointmentBlocksSchema.safeParse({
         doctorId,
         appointmentBlocks,
@@ -47,6 +50,7 @@ export async function updateDoctorAppointmentBlocks(
         method: "PUT",
         headers: {
             "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
             appointmentBlocks: result.data.appointmentBlocks,

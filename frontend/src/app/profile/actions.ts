@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { z } from "zod";
 
 export type ProfileActionState = {
@@ -53,6 +54,8 @@ export async function updateProfile(
         throw new Error("BACKEND_URL is not configured");
     }
 
+    const token = (await cookies()).get("auth_token")?.value;
+
     const raw = Object.fromEntries(formData.entries());
     const result = profileSchema.safeParse({
         ...raw,
@@ -77,6 +80,7 @@ export async function updateProfile(
         method: "PATCH",
         headers: {
             "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify(payload),
     });

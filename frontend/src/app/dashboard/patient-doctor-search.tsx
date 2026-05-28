@@ -39,6 +39,7 @@ type ApiResponse<T> = {
 };
 
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:3000";
+const axiosConfig = { withCredentials: true };
 
 function getDoctorName(doctor: DoctorSearchResult) {
     return `${doctor.firstName} ${doctor.lastName}`;
@@ -57,7 +58,10 @@ export function PatientDoctorSearch({ patientId }: { patientId: number }) {
 
         async function loadSpecializations() {
             try {
-                const response = await axios.get<ApiResponse<DoctorSearchResult[]>>(`${backendUrl}/doctor`);
+                const response = await axios.get<ApiResponse<DoctorSearchResult[]>>(
+                    `${backendUrl}/doctor`,
+                    axiosConfig,
+                );
                 const availableSpecializations = response.data.data
                     .map((doctor) => doctor.specialization)
                     .filter((value): value is string => Boolean(value));
@@ -93,6 +97,7 @@ export function PatientDoctorSearch({ patientId }: { patientId: number }) {
                         specialization: specialization === "All" ? undefined : specialization,
                     },
                     signal: abortController.signal,
+                    withCredentials: true,
                 });
 
                 setDoctors(Array.isArray(response.data.data) ? response.data.data : []);
@@ -230,6 +235,7 @@ function DoctorBookingDialog({
 
             const response = await axios.get<ApiResponse<AppointmentBlock[]>>(
                 `${backendUrl}/doctor/${doctor.id}/appointment-blocks`,
+                axiosConfig,
             );
 
             setAppointmentBlocks(Array.isArray(response.data.data) ? response.data.data : []);
@@ -255,16 +261,20 @@ function DoctorBookingDialog({
             setIsBooking(true);
             setStatusMessage(null);
 
-            await axios.post(`${backendUrl}/appointments`, {
-                patientId,
-                doctorId: doctor.id,
-                timeslot: getAppointmentTimestamp(
-                    date,
-                    selectedSlot.dayOfWeek,
-                    selectedSlot.slotIndex,
-                ),
-                dayOfWeek: selectedSlot.dayOfWeek,
-            });
+            await axios.post(
+                `${backendUrl}/appointments`,
+                {
+                    patientId,
+                    doctorId: doctor.id,
+                    timeslot: getAppointmentTimestamp(
+                        date,
+                        selectedSlot.dayOfWeek,
+                        selectedSlot.slotIndex,
+                    ),
+                    dayOfWeek: selectedSlot.dayOfWeek,
+                },
+                axiosConfig,
+            );
 
             setStatusMessage("Appointment booked.");
             router.refresh();

@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+    BadRequestException,
+    ForbiddenException,
+    Injectable,
+    NotFoundException,
+} from '@nestjs/common';
 import { CreatePrescriptionDto } from './dto/create-prescription.dto';
 import { UpdatePrescriptionDto } from './dto/update-prescription.dto';
 import { DbService } from 'src/db/db.service';
@@ -9,7 +14,11 @@ import { and, eq, SQL } from 'drizzle-orm';
 export class PrescriptionsService {
     constructor(private dbService: DbService) { }
 
-    async create(createPrescriptionDto: CreatePrescriptionDto) {
+    async create(createPrescriptionDto: CreatePrescriptionDto, actorId?: number) {
+        if (actorId !== undefined && actorId !== createPrescriptionDto.doctor) {
+            throw new ForbiddenException('Doctors can only create their own prescriptions');
+        }
+
         this.validatePrescriptionData(createPrescriptionDto);
         await this.ensurePrescriptionReferencesExist(createPrescriptionDto);
 
@@ -21,19 +30,34 @@ export class PrescriptionsService {
         return newPrescription;
     }
 
-    async findAll(query: { doctor?: number, patient?: number, record?: number } = {}) {
+    async findAll(
+        query: { doctor?: number, patient?: number, record?: number } = {},
+        actorId?: number,
+    ) {
         const conditions: SQL[] = [];
 
         if (query.doctor) {
+            if (actorId !== undefined && Number(query.doctor) !== actorId) {
+                throw new ForbiddenException('You can only view your own prescriptions');
+            }
+
             conditions.push(eq(prescription.doctor, Number(query.doctor)));
         }
 
         if (query.patient) {
+            if (actorId !== undefined && Number(query.patient) !== actorId) {
+                throw new ForbiddenException('You can only view your own prescriptions');
+            }
+
             conditions.push(eq(prescription.patient, Number(query.patient)));
         }
 
         if (query.record) {
             conditions.push(eq(prescription.record, Number(query.record)));
+        }
+
+        if (actorId !== undefined && !query.doctor && !query.patient) {
+            conditions.push(eq(prescription.patient, actorId));
         }
 
         const dbQuery = this.dbService.connection
@@ -47,7 +71,7 @@ export class PrescriptionsService {
         return await dbQuery.where(and(...conditions));
     }
 
-    async findOne(id: number) {
+    async findOne(id: number, actorId?: number) {
         this.validateId(id, 'Prescription id');
 
         const [existingPrescription] = await this.dbService.connection
@@ -60,20 +84,22 @@ export class PrescriptionsService {
             throw new NotFoundException('Prescription not found');
         }
 
+        this.ensurePrescriptionActor(existingPrescription, actorId);
+
         return existingPrescription;
     }
 
-    async update(id: number, updatePrescriptionDto: UpdatePrescriptionDto) {
+    async update(
+        id: number,
+        updatePrescriptionDto: UpdatePrescriptionDto,
+        actorId?: number,
+    ) {
         this.validateId(id, 'Prescription id');
 
-        const [existingPrescription] = await this.dbService.connection
-            .select()
-            .from(prescription)
-            .where(eq(prescription.id, id))
-            .limit(1);
+        const existingPrescription = await this.findOne(id, actorId);
 
-        if (!existingPrescription) {
-            throw new NotFoundException('Prescription not found');
+        if (actorId !== undefined && existingPrescription.doctor !== actorId) {
+            throw new ForbiddenException('Only the prescription doctor can update this prescription');
         }
 
         const values: Partial<typeof prescription.$inferInsert> = {};
@@ -122,8 +148,14 @@ export class PrescriptionsService {
         return updatedPrescription;
     }
 
-    async remove(id: number) {
+    async remove(id: number, actorId?: number) {
         this.validateId(id, 'Prescription id');
+
+        const existingPrescription = await this.findOne(id, actorId);
+
+        if (actorId !== undefined && existingPrescription.doctor !== actorId) {
+            throw new ForbiddenException('Only the prescription doctor can delete this prescription');
+        }
 
         const [deletedPrescription] = await this.dbService.connection
             .delete(prescription)
@@ -201,6 +233,22 @@ export class PrescriptionsService {
     private validateId(id: number, fieldName: string) {
         if (!Number.isInteger(id) || id <= 0) {
             throw new BadRequestException(`${fieldName} must be a positive integer`);
+        }
+    }
+
+    private ensurePrescriptionActor(
+        prescriptionData: typeof prescription.$inferSelect,
+        actorId?: number,
+    ) {
+        if (actorId === undefined) {
+            return;
+        }
+
+        if (
+            prescriptionData.doctor !== actorId &&
+            prescriptionData.patient !== actorId
+        ) {
+            throw new ForbiddenException('You can only access your own prescriptions');
         }
     }
 }

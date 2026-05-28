@@ -1,37 +1,44 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
 import { RecordsService } from './records.service';
 import { CreateRecordDto } from './dto/create-record.dto';
 import { UpdateRecordDto } from './dto/update-record.dto';
+import { AuthGuard } from 'src/auth/auth.guard';
+import { CurrentUser, type AuthUser } from 'src/auth/auth-user';
 
 @Controller('records')
+@UseGuards(AuthGuard)
 export class RecordsController {
     constructor(private readonly recordsService: RecordsService) { }
 
     @Post()
-    async create(@Body() createRecordDto: CreateRecordDto) {
-        return await this.recordsService.create(createRecordDto);
+    async create(@Body() createRecordDto: CreateRecordDto, @CurrentUser() user: AuthUser) {
+        return await this.recordsService.create(createRecordDto, user.id);
     }
 
     @Get()
     async findAll(@Query() query: {
         doctor?: number,
         patient?: number
-    }) {
-        return await this.recordsService.findAll(query);
+    }, @CurrentUser() user: AuthUser) {
+        return await this.recordsService.findAll(query, user.id);
     }
 
     @Get(':id')
-    findOne(@Param('id') id: string) {
-        return this.recordsService.findOne(+id);
+    findOne(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+        return this.recordsService.findOne(+id, user.id);
     }
 
     @Patch(':id')
-    update(@Param('id') id: string, @Body() updateRecordDto: UpdateRecordDto) {
-        return this.recordsService.update(+id, updateRecordDto);
+    update(
+        @Param('id') id: string,
+        @Body() updateRecordDto: UpdateRecordDto,
+        @CurrentUser() user: AuthUser,
+    ) {
+        return this.recordsService.update(+id, updateRecordDto, user.id);
     }
 
     @Delete(':id')
-    async remove(@Param('id') id: string) {
-        return await this.recordsService.remove(+id);
+    async remove(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+        return await this.recordsService.remove(+id, user.id);
     }
 }
