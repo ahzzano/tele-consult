@@ -17,7 +17,7 @@ export class RecordsController {
         doctor?: number,
         patient?: number
     }) {
-        return await this.recordsService.findAll();
+        return await this.recordsService.findAll(query);
     }
 
     @Get(':id')
@@ -31,7 +31,7 @@ export class RecordsController {
     }
 
     @Delete(':id')
-    remove(@Param('id') id: string) {
-        return this.recordsService.remove(+id);
+    async remove(@Param('id') id: string) {
+        return await this.recordsService.remove(+id);
     }
 }

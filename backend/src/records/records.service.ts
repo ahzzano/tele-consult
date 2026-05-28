@@ -13,7 +13,7 @@ export class RecordsService {
         const [existingDoctor] = await this.dbService.connection
             .select()
             .from(doctor)
-            .where(eq(doctor.acctId, doctorId))
+            .where(eq(doctor.acctId, createRecordDto.doctor))
             .limit(1);
 
         if (!existingDoctor) {
@@ -23,7 +23,7 @@ export class RecordsService {
         const [existingPatient] = await this.dbService.connection
             .select()
             .from(patient)
-            .where(eq(patient.acctId, patientId))
+            .where(eq(patient.acctId, createRecordDto.patient))
             .limit(1);
 
         if (!existingPatient) {
@@ -63,7 +63,10 @@ export class RecordsService {
         return `This action updates a #${id} record`;
     }
 
-    remove(id: number) {
-        return `This action removes a #${id} record`;
+    async remove(id: number) {
+        return await this.dbService.connection
+            .delete(medicalRecord)
+            .where(eq(medicalRecord.id, id))
+            .returning()
     }
 }
