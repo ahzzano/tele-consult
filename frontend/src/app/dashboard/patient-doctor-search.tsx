@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { CalendarPlus, CheckCircle2, Search, SlidersHorizontal, Stethoscope } from "lucide-react";
 import { Dialog } from "@base-ui/react/dialog";
+import { useRouter } from "next/navigation";
 import axios from "axios";
 
 import { buttonVariants } from "@/components/ui/button";
@@ -318,6 +319,7 @@ function DoctorBookingDialog({
     } | null>(null);
     const [statusMessage, setStatusMessage] = useState<string | null>(null);
     const [isBooking, setIsBooking] = useState(false);
+    const router = useRouter();
 
     const availability = createAvailabilityFromBlocks(appointmentBlocks);
 
@@ -366,6 +368,7 @@ function DoctorBookingDialog({
             });
 
             setStatusMessage("Appointment booked.");
+            router.refresh();
         } catch {
             setStatusMessage("Unable to book this appointment.");
         } finally {
