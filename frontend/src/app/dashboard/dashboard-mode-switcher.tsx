@@ -76,7 +76,7 @@ export function DashboardModeSwitcher({
                 </div>
             </div>
             {mode === "Patient" ? (
-                <PatientDashboard />
+                <PatientDashboard patientId={profile.id} />
             ) : (
                 <DoctorDashboard
                     doctorId={profile.role === "Doctor" ? profile.id : null}
@@ -87,7 +87,7 @@ export function DashboardModeSwitcher({
     );
 }
 
-function PatientDashboard() {
+function PatientDashboard({ patientId }: { patientId: number }) {
     return (
         <div className="grid gap-4">
             <div className="grid gap-4 md:grid-cols-2">
@@ -118,7 +118,7 @@ function PatientDashboard() {
                 </Card>
             </div>
 
-            <PatientDoctorSearch />
+            <PatientDoctorSearch patientId={patientId} />
         </div>
     );
 }
