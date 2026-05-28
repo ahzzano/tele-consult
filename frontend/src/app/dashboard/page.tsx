@@ -2,6 +2,8 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { DashboardModeSwitcher } from "./dashboard-mode-switcher";
+import type { AppointmentBlock } from "./appointment-schedule";
+import type { Appointment } from "./dashboard-types";
 
 type AuthTokenPayload = {
     email?: string;
@@ -10,14 +12,6 @@ type AuthTokenPayload = {
 type AccountProfile = {
     id: number;
     role: "Patient" | "Doctor";
-};
-
-type AppointmentBlock = {
-    blockId: number;
-    doctorId: number;
-    dayOfWeek: number;
-    start: string;
-    end: string;
 };
 
 type ApiResponse<T> = {
@@ -77,6 +71,7 @@ export default async function DashboardPage() {
     }
 
     let appointmentBlocks: AppointmentBlock[] = [];
+    let appointments: Appointment[] = [];
 
     if (profile.role === "Doctor") {
         const appointmentBlocksResponse = await fetch(
@@ -95,11 +90,29 @@ export default async function DashboardPage() {
         appointmentBlocks = appointmentBlocksBody.data;
     }
 
+    const appointmentsQueryKey = profile.role === "Doctor" ? "doctor" : "patient";
+    const appointmentsResponse = await fetch(
+        `${backendUrl}/appointments?${appointmentsQueryKey}=${profile.id}`,
+        {
+            cache: "no-store",
+        },
+    );
+
+    if (!appointmentsResponse.ok) {
+        throw new Error("Failed to load appointments");
+    }
+
+    const appointmentsBody = (await appointmentsResponse.json()) as ApiResponse<Appointment[]>;
+    appointments = appointmentsBody.data.toSorted(
+        (left, right) => new Date(left.timeslot).getTime() - new Date(right.timeslot).getTime(),
+    );
+
     return (
         <main className="min-h-screen bg-muted/30">
             <DashboardModeSwitcher
                 profile={profile}
                 appointmentBlocks={appointmentBlocks}
+                appointments={appointments}
             />
         </main>
     );

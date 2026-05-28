@@ -34,6 +34,14 @@ export const appointmentBlock = pgTable("appointmentBlock", {
 	dayOfWeek: integer("day_of_week").notNull(),
 });
 
+export const appointment = pgTable("appointment", {
+    appointmentId: serial().primaryKey(),
+    doctorId: integer('doctor_id').notNull(),
+    patientId: integer('patient_id').notNull(),
+    timeslot: timestamp({ mode: 'string'}).notNull(),
+    day: integer('day_of_week').notNull()
+})
+
 export type Account = typeof account.$inferSelect;
 export type NewAccount = typeof account.$inferInsert;
 

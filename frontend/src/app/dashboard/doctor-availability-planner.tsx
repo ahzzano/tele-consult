@@ -2,9 +2,10 @@
 
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { CalendarClock, RotateCcw, Save } from "lucide-react";
+import { CalendarClock, RotateCcw, Save, X } from "lucide-react";
+import { Dialog } from "@base-ui/react/dialog";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
     Card,
     CardContent,
@@ -18,18 +19,13 @@ import {
     type AppointmentBlockPayload,
     type AvailabilityActionState,
 } from "./actions";
+import type { AppointmentBlock } from "./appointment-schedule";
+
+export type { AppointmentBlock } from "./appointment-schedule";
 
 type DayKey = "sun" | "mon" | "tue" | "wed" | "thu" | "fri" | "sat";
 
 type Availability = Record<DayKey, boolean[]>;
-
-export type AppointmentBlock = {
-    blockId: number;
-    doctorId: number;
-    dayOfWeek: number;
-    start: string;
-    end: string;
-};
 
 type DragState = {
     dayIndex: number;
@@ -300,17 +296,88 @@ export function DoctorAvailabilityPlanner({
         setActionState({ status: "idle" });
     }
 
+    const daySummary = (
+        <div className="grid gap-3 md:grid-cols-7">
+            {days.map((day) => {
+                const ranges = getDayRanges(availability[day.key]);
+
+                return (
+                    <div key={day.key} className="rounded-lg border bg-background p-3">
+                        <div className="text-sm font-medium">{day.shortLabel}</div>
+                        <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                            {ranges.length > 0 ? (
+                                ranges.map((range) => (
+                                    <div key={`${range.start}-${range.end}`}>
+                                        {formatTime(range.start)} - {formatTime(range.end)}
+                                    </div>
+                                ))
+                            ) : (
+                                <div>Unavailable</div>
+                            )}
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+
     return (
-        <Card className="md:col-span-2">
-            <CardHeader className="gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
+        <Dialog.Root>
+            <Card className="md:col-span-2">
+                <CardHeader className="gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
+                    <div>
+                        <CardTitle className="flex items-center gap-2">
+                            <CalendarClock className="size-5 text-emerald-700" />
+                            Consultation Hours
+                        </CardTitle>
+                        <CardDescription>
+                            Weekly availability patients can book from, Sunday through Saturday.
+                        </CardDescription>
+                    </div>
+
+                    <Dialog.Trigger
+                        className={cn(buttonVariants({ variant: "outline" }), "sm:justify-self-end")}
+                    >
+                        <CalendarClock className="size-4" />
+                        Edit calendar
+                    </Dialog.Trigger>
+                </CardHeader>
+
+                <CardContent className="space-y-4">
+                    <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                        <span className="rounded-md bg-emerald-50 px-2 py-1 font-medium text-emerald-800 ring-1 ring-emerald-200">
+                            {totalHours.toFixed(totalHours % 1 === 0 ? 0 : 1)} hours weekly
+                        </span>
+                        {actionState.message ? (
+                            <span
+                                className={cn(
+                                    actionState.status === "error" && "text-destructive",
+                                    actionState.status === "success" && "text-emerald-700",
+                                )}
+                            >
+                                {actionState.message}
+                            </span>
+                        ) : (
+                            <span>Unsaved changes</span>
+                        )}
+                    </div>
+
+                    {daySummary}
+                </CardContent>
+            </Card>
+
+            <Dialog.Portal>
+                <Dialog.Backdrop className="fixed inset-0 z-50 bg-black/40" />
+                <Dialog.Popup className="fixed left-1/2 top-1/2 z-50 flex h-[min(860px,calc(100vh-3rem))] w-[min(1180px,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-lg border bg-background shadow-xl">
+            <CardHeader className="gap-4 px-6 py-5 sm:grid-cols-[1fr_auto] sm:items-start">
                 <div>
-                    <CardTitle className="flex items-center gap-2">
+                    <Dialog.Title className="flex items-center gap-2 text-lg font-semibold">
                         <CalendarClock className="size-5 text-emerald-700" />
                         Consultation Hours
-                    </CardTitle>
-                    <CardDescription>
+                    </Dialog.Title>
+                    <Dialog.Description className="mt-1 text-sm text-muted-foreground">
                         Weekly availability patients can book from, Sunday through Saturday.
-                    </CardDescription>
+                    </Dialog.Description>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 sm:justify-end">
@@ -318,14 +385,18 @@ export function DoctorAvailabilityPlanner({
                         <RotateCcw className="size-4" />
                         Reset
                     </Button>
-                    <Button type="button" onClick={handleSave} disabled={isPending || !doctorId}>
+                    <Button type="button" onClick={handleSave} disabled={isPending}>
                         <Save className="size-4" />
                         {isPending ? "Saving" : "Save"}
                     </Button>
+                    <Dialog.Close className={cn(buttonVariants({ variant: "ghost", size: "icon" }))}>
+                        <X className="size-4" />
+                        <span className="sr-only">Close calendar</span>
+                    </Dialog.Close>
                 </div>
             </CardHeader>
 
-            <CardContent className="space-y-5">
+            <CardContent className="flex min-h-0 flex-1 flex-col gap-7 px-6 pb-6">
                 <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                     <span className="rounded-md bg-emerald-50 px-2 py-1 font-medium text-emerald-800 ring-1 ring-emerald-200">
                         {totalHours.toFixed(totalHours % 1 === 0 ? 0 : 1)} hours weekly
@@ -344,7 +415,7 @@ export function DoctorAvailabilityPlanner({
                     )}
                 </div>
 
-                <div className="overflow-x-auto rounded-lg border bg-background">
+                <div className="min-h-0 flex-1 overflow-auto rounded-lg border bg-background">
                     <div className="min-w-[860px]">
                         <div className="grid grid-cols-[72px_repeat(7,minmax(104px,1fr))] border-b bg-muted/50">
                             <div className="px-3 py-3 text-xs font-medium uppercase text-muted-foreground">
@@ -366,18 +437,28 @@ export function DoctorAvailabilityPlanner({
                             onPointerMove={handlePointerMove}
                             style={{ touchAction: "none" }}
                         >
+                            <div className="h-4" />
+                            {days.map((day) => (
+                                <div
+                                    key={`${day.key}-top-spacer`}
+                                    aria-hidden="true"
+                                    className="h-4 border-l bg-background"
+                                />
+                            ))}
+
                             {Array.from({ length: slotCount }).map((_, slotIndex) => {
                                 const showTime = slotIndex % slotsPerHour === 0;
 
                                 return (
                                     <div key={slotIndex} className="contents">
                                         <div
-                                            className={cn(
-                                                "flex h-8 items-start justify-end border-t px-2 pt-1 text-xs text-muted-foreground",
-                                                !showTime && "text-transparent",
-                                            )}
+                                            className="relative h-8 border-t text-xs text-muted-foreground"
                                         >
-                                            {formatTime(slotIndex)}
+                                            {showTime ? (
+                                                <span className="absolute right-2 top-0 -translate-y-1/2 bg-background px-1">
+                                                    {formatTime(slotIndex)}
+                                                </span>
+                                            ) : null}
                                         </div>
 
                                         {days.map((day, dayIndex) => {
@@ -420,29 +501,12 @@ export function DoctorAvailabilityPlanner({
                     </div>
                 </div>
 
-                <div className="grid gap-3 md:grid-cols-7">
-                    {days.map((day) => {
-                        const ranges = getDayRanges(availability[day.key]);
-
-                        return (
-                            <div key={day.key} className="rounded-lg border bg-background p-3">
-                                <div className="text-sm font-medium">{day.shortLabel}</div>
-                                <div className="mt-2 space-y-1 text-xs text-muted-foreground">
-                                    {ranges.length > 0 ? (
-                                        ranges.map((range) => (
-                                            <div key={`${range.start}-${range.end}`}>
-                                                {formatTime(range.start)} - {formatTime(range.end)}
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <div>Unavailable</div>
-                                    )}
-                                </div>
-                            </div>
-                        );
-                    })}
+                <div className="shrink-0">
+                    {daySummary}
                 </div>
             </CardContent>
-        </Card>
+                </Dialog.Popup>
+            </Dialog.Portal>
+        </Dialog.Root>
     );
 }

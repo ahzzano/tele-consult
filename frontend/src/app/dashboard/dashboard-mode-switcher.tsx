@@ -10,6 +10,14 @@ import {
     DoctorAvailabilityPlanner,
     type AppointmentBlock,
 } from "./doctor-availability-planner";
+import { PatientDoctorSearch } from "./patient-doctor-search";
+import {
+    formatAppointmentTime,
+    getDoctorName,
+    getPatientName,
+    PatientAppointments,
+} from "./appointment-management";
+import type { Appointment } from "./dashboard-types";
 
 type DashboardMode = "Patient" | "Doctor";
 
@@ -19,6 +27,7 @@ type DashboardModeSwitcherProps = {
         role: DashboardMode;
     };
     appointmentBlocks: AppointmentBlock[];
+    appointments: Appointment[];
 };
 
 const modeButtonClassName =
@@ -27,6 +36,7 @@ const modeButtonClassName =
 export function DashboardModeSwitcher({
     profile,
     appointmentBlocks,
+    appointments,
 }: DashboardModeSwitcherProps) {
     const [mode, setMode] = useState<DashboardMode>(profile.role);
 
@@ -44,10 +54,11 @@ export function DashboardModeSwitcher({
                     <button
                         type="button"
                         aria-pressed={mode === "Patient"}
+                        disabled={profile.role !== "Patient"}
                         onClick={() => setMode("Patient")}
                         className={`${modeButtonClassName} ${mode === "Patient"
                             ? "bg-background text-foreground shadow-sm"
-                            : "text-muted-foreground hover:text-foreground"
+                            : "text-muted-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:text-muted-foreground"
                             }`}
                     >
                         <UserRound className="size-4" />
@@ -56,10 +67,11 @@ export function DashboardModeSwitcher({
                     <button
                         type="button"
                         aria-pressed={mode === "Doctor"}
+                        disabled={profile.role !== "Doctor"}
                         onClick={() => setMode("Doctor")}
                         className={`${modeButtonClassName} ${mode === "Doctor"
                             ? "bg-background text-foreground shadow-sm"
-                            : "text-muted-foreground hover:text-foreground"
+                            : "text-muted-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:text-muted-foreground"
                             }`}
                     >
                         <Stethoscope className="size-4" />
@@ -73,45 +85,63 @@ export function DashboardModeSwitcher({
                 </div>
             </div>
             {mode === "Patient" ? (
-                <PatientDashboard />
+                <PatientDashboard patientId={profile.id} appointments={appointments} />
             ) : (
                 <DoctorDashboard
                     doctorId={profile.role === "Doctor" ? profile.id : null}
                     appointmentBlocks={appointmentBlocks}
+                    appointments={appointments}
                 />
             )}
         </div>
     );
 }
 
-function PatientDashboard() {
-    return (
-        <div className="grid gap-4 md:grid-cols-2">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Upcoming Consultation</CardTitle>
-                    <CardDescription>Your next appointment schedule.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex items-center gap-3 text-sm">
-                        <CalendarDays className="size-5 text-muted-foreground" />
-                        <span>No upcoming consultation scheduled.</span>
-                    </div>
-                </CardContent>
-            </Card>
+function PatientDashboard({
+    patientId,
+    appointments,
+}: {
+    patientId: number;
+    appointments: Appointment[];
+}) {
+    const upcomingAppointment = appointments[0];
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Medical Summary</CardTitle>
-                    <CardDescription>Patient details available to your doctor.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex items-center gap-3 text-sm">
-                        <ClipboardList className="size-5 text-muted-foreground" />
-                        <span>Complete your profile to improve consultation context.</span>
-                    </div>
-                </CardContent>
-            </Card>
+    return (
+        <div className="grid gap-4">
+            <div className="grid gap-4 md:grid-cols-2">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Upcoming Consultation</CardTitle>
+                        <CardDescription>Your next appointment schedule.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="flex items-center gap-3 text-sm">
+                            <CalendarDays className="size-5 text-muted-foreground" />
+                            <span>
+                                {upcomingAppointment
+                                    ? `${formatAppointmentTime(upcomingAppointment.timeslot)} with Dr. ${getDoctorName(upcomingAppointment)}`
+                                    : "No upcoming consultation scheduled."}
+                            </span>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Medical Summary</CardTitle>
+                        <CardDescription>Patient details available to your doctor.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="flex items-center gap-3 text-sm">
+                            <ClipboardList className="size-5 text-muted-foreground" />
+                            <span>Complete your profile to improve consultation context.</span>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            <PatientAppointments appointments={appointments} />
+            <PatientDoctorSearch patientId={patientId} />
         </div>
     );
 }
@@ -119,9 +149,11 @@ function PatientDashboard() {
 function DoctorDashboard({
     doctorId,
     appointmentBlocks,
+    appointments,
 }: {
     doctorId: number | null;
     appointmentBlocks: AppointmentBlock[];
+    appointments: Appointment[];
 }) {
     return (
         <div className="grid gap-4 md:grid-cols-2">
@@ -131,10 +163,27 @@ function DoctorDashboard({
                     <CardDescription>Consultations waiting for review.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="flex items-center gap-3 text-sm">
-                        <ClipboardList className="size-5 text-muted-foreground" />
-                        <span>No patients currently waiting.</span>
-                    </div>
+                    {appointments.length > 0 ? (
+                        <div className="grid gap-2 text-sm">
+                            {appointments.slice(0, 3).map((appointment) => (
+                                <div
+                                    key={appointment.appointmentId}
+                                    className="flex items-center gap-3"
+                                >
+                                    <ClipboardList className="size-5 text-muted-foreground" />
+                                    <span>
+                                        {getPatientName(appointment)} at{" "}
+                                        {formatAppointmentTime(appointment.timeslot)}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-3 text-sm">
+                            <ClipboardList className="size-5 text-muted-foreground" />
+                            <span>No patients currently waiting.</span>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
 
