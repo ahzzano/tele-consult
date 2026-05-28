@@ -1,3 +1,4 @@
+import { real } from "drizzle-orm/pg-core";
 import { pgTable, serial, text, timestamp, integer, date, numeric } from "drizzle-orm/pg-core";
 
 export const account = pgTable('account', {
@@ -40,6 +41,25 @@ export const appointment = pgTable("appointment", {
     patientId: integer('patient_id').notNull(),
     timeslot: timestamp({ mode: 'string'}).notNull(),
     day: integer('day_of_week').notNull()
+})
+
+export const medicalRecord = pgTable('medicalRecord', {
+    id: serial('id').primaryKey(),
+    patient: integer('patient').notNull().references(() => patient.acctId),
+    doctor: integer('doctor').notNull().references(() => doctor.acctId),
+    diagnosis: text('diagnosis'),
+    summary: text('summary'),
+    followUpInstructions: text('summary'),
+    createdAt: timestamp('created_at').defaultNow()
+})
+
+export const prescription = pgTable('prescription', {
+    id: serial('id').primaryKey(),
+    patient: integer('patient').notNull().references(() => patient.acctId),
+    doctor: integer('doctor').notNull().references(() => doctor.acctId),
+    record: integer('record').notNull().references(() => medicalRecord.id),
+    medicine: text('medicine').notNull(),
+    dosage: real('dosage').notNull()
 })
 
 export type Account = typeof account.$inferSelect;
