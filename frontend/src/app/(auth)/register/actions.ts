@@ -2,6 +2,7 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import bcrypt from "bcrypt";
 import { z } from "zod";
 
 const requiredText = (fieldName: string) =>
@@ -50,6 +51,8 @@ const registrationSchema = z.discriminatedUnion("role", [
     patientRegistrationSchema,
     doctorRegistrationSchema,
 ]);
+
+const SALT_ROUNDS = 12;
 
 type LoginResponse = {
     success: boolean;
@@ -116,13 +119,17 @@ export async function register(
     }
 
     const payload = result.data;
+    const hashedPassword = await bcrypt.hash(payload.password, SALT_ROUNDS);
 
     const response = await fetch(`${backendUrl}/account`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+            ...payload,
+            password: hashedPassword,
+        }),
     });
 
     if (!response.ok) {

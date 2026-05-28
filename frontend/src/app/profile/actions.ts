@@ -1,5 +1,6 @@
 "use server";
 
+import bcrypt from "bcrypt";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -29,6 +30,10 @@ const profileSchema = z.object({
     firstName: z.string().trim().min(1, "First name is required"),
     lastName: z.string().trim().min(1, "Last name is required"),
     email: z.email().trim(),
+    password: z.preprocess(
+        (value) => (value === "" ? undefined : value),
+        z.string().min(8, "Password must be at least 8 characters").optional()
+    ),
     profilePicture: optionalUrl,
     birthday: optionalText,
     contactDetails: optionalText,
@@ -38,6 +43,8 @@ const profileSchema = z.object({
     specialization: optionalText,
     bio: optionalText,
 });
+
+const SALT_ROUNDS = 12;
 
 export async function updateProfile(
     _previousState: ProfileActionState,
@@ -61,7 +68,14 @@ export async function updateProfile(
         };
     }
 
-    const { id, ...payload } = result.data;
+    const { id, password, ...profilePayload } = result.data;
+    const payload = password
+        ? {
+              ...profilePayload,
+              password: await bcrypt.hash(password, SALT_ROUNDS),
+          }
+        : profilePayload;
+
     const response = await fetch(`${backendUrl}/account/${id}`, {
         method: "PATCH",
         headers: {
