@@ -1,6 +1,5 @@
 "use server";
 
-import bcrypt from "bcrypt";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -44,8 +43,6 @@ const profileSchema = z.object({
     bio: optionalText,
 });
 
-const SALT_ROUNDS = 12;
-
 export async function updateProfile(
     _previousState: ProfileActionState,
     formData: FormData
@@ -72,7 +69,7 @@ export async function updateProfile(
     const payload = password
         ? {
               ...profilePayload,
-              password: await bcrypt.hash(password, SALT_ROUNDS),
+              password,
           }
         : profilePayload;
 

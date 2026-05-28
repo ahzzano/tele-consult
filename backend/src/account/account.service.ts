@@ -4,6 +4,9 @@ import { UpdateAccountDto } from './dto/update-account.dto';
 import { DbService } from 'src/db/db.service';
 import { account, doctor, patient } from 'src/db/schema';
 import { eq } from 'drizzle-orm';
+import bcrypt from 'bcrypt';
+
+const SALT_ROUNDS = 12;
 
 @Injectable()
 export class AccountService {
@@ -14,7 +17,13 @@ export class AccountService {
     }
 
     async create(createAccountDto: CreateAccountDto) {
-        return await this.db.connection.insert(account).values(createAccountDto).returning();
+        return await this.db.connection
+            .insert(account)
+            .values({
+                ...createAccountDto,
+                password: await this.hashPassword(createAccountDto.password),
+            })
+            .returning();
     }
 
     async register(dto: CreateAccountDto) {
@@ -32,7 +41,7 @@ export class AccountService {
             .insert(account)
             .values({
                 email: dto.email,
-                password: dto.password,
+                password: await this.hashPassword(dto.password),
                 firstName: dto.firstName,
                 lastName: dto.lastName,
             })
@@ -139,7 +148,7 @@ export class AccountService {
             .update(account)
             .set({
                 ...accountFields,
-                ...(password ? { password } : {}),
+                ...(password ? { password: await this.hashPassword(password) } : {}),
             })
             .where(eq(account.id, id));
 
@@ -173,5 +182,9 @@ export class AccountService {
 
     remove(id: number) {
         return `This action removes a #${id} account`;
+    }
+
+    private async hashPassword(password: string) {
+        return bcrypt.hash(password, SALT_ROUNDS);
     }
 }
