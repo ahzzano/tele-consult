@@ -3,7 +3,7 @@ import { CreateRecordDto } from './dto/create-record.dto';
 import { UpdateRecordDto } from './dto/update-record.dto';
 import { DbService } from 'src/db/db.service';
 import { doctor, medicalRecord, patient } from 'src/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, SQL, and } from 'drizzle-orm';
 
 @Injectable()
 export class RecordsService {
@@ -36,8 +36,23 @@ export class RecordsService {
             .returning()
     }
 
-    findAll() {
-        return `This action returns all records`;
+    async findAll(query: { doctor?: number, patient?: number }) {
+        const conditions: SQL[] = [];
+
+        if(query.doctor)  {
+            conditions.push(eq(medicalRecord.doctor, query.doctor));
+        }
+
+        if(query.patient) {
+            conditions.push(eq(medicalRecord.patient, query.patient));
+        }
+
+        const result = await this.dbService.connection
+            .select()
+            .from(medicalRecord)
+            .where(and(...conditions))
+
+        return result
     }
 
     findOne(id: number) {
