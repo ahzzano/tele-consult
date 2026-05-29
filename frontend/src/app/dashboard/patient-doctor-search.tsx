@@ -45,8 +45,7 @@ type Recommendation = {
     doctors: DoctorSearchResult[];
 };
 
-const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:3000";
-const axiosConfig = { withCredentials: true };
+const backendUrl = "/api/backend";
 
 function getDoctorName(doctor: DoctorSearchResult) {
     return `${doctor.firstName} ${doctor.lastName}`;
@@ -70,7 +69,6 @@ export function PatientDoctorSearch({ patientId }: { patientId: number }) {
             try {
                 const response = await axios.get<ApiResponse<DoctorSearchResult[]>>(
                     `${backendUrl}/doctor`,
-                    axiosConfig,
                 );
                 const availableSpecializations = response.data.data
                     .map((doctor) => doctor.specialization)
@@ -107,7 +105,6 @@ export function PatientDoctorSearch({ patientId }: { patientId: number }) {
                         specialization: specialization === "All" ? undefined : specialization,
                     },
                     signal: abortController.signal,
-                    withCredentials: true,
                 });
 
                 setDoctors(Array.isArray(response.data.data) ? response.data.data : []);
@@ -144,7 +141,6 @@ export function PatientDoctorSearch({ patientId }: { patientId: number }) {
                 `${backendUrl}/doctor/recommendations`,
                 {
                     params: { symptoms },
-                    withCredentials: true,
                 },
             );
 
@@ -309,11 +305,9 @@ function DoctorBookingDialog({
 
             const response = await axios.get<ApiResponse<AppointmentBlock[]>>(
                 `${backendUrl}/doctor/${doctor.id}/appointment-blocks`,
-                axiosConfig,
             );
             const bookedSlotsResponse = await axios.get<ApiResponse<BookedSlot[]>>(
                 `${backendUrl}/appointments/doctor/${doctor.id}/booked-slots`,
-                axiosConfig,
             );
 
             setAppointmentBlocks(Array.isArray(response.data.data) ? response.data.data : []);
@@ -356,7 +350,6 @@ function DoctorBookingDialog({
                     ),
                     dayOfWeek: selectedSlot.dayOfWeek,
                 },
-                axiosConfig,
             );
 
             setStatusMessage("Appointment booked.");

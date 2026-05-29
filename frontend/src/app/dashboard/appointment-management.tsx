@@ -33,8 +33,7 @@ type ApiResponse<T> = {
     data: T;
 };
 
-const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:3000";
-const axiosConfig = { withCredentials: true };
+const backendUrl = "/api/backend";
 
 export function formatAppointmentTime(timeslot: string) {
     return new Intl.DateTimeFormat("en", {
@@ -207,7 +206,6 @@ function ConsultationNotesDialog({ appointment }: { appointment: Appointment }) 
                     summary,
                     followUpInstructions,
                 },
-                axiosConfig,
             );
 
             if (medicine && dosageValue) {
@@ -220,7 +218,6 @@ function ConsultationNotesDialog({ appointment }: { appointment: Appointment }) 
                         medicine,
                         dosage: Number(dosageValue),
                     },
-                    axiosConfig,
                 );
             }
 
@@ -354,11 +351,9 @@ function RescheduleAppointmentDialog({
 
             const response = await axios.get<ApiResponse<AppointmentBlock[]>>(
                 `${backendUrl}/doctor/${appointment.doctorId}/appointment-blocks`,
-                axiosConfig,
             );
             const bookedSlotsResponse = await axios.get<ApiResponse<BookedSlot[]>>(
                 `${backendUrl}/appointments/doctor/${appointment.doctorId}/booked-slots`,
-                axiosConfig,
             );
 
             setAppointmentBlocks(Array.isArray(response.data.data) ? response.data.data : []);
@@ -401,7 +396,6 @@ function RescheduleAppointmentDialog({
                     ),
                     dayOfWeek: selectedSlot.dayOfWeek,
                 },
-                axiosConfig,
             );
 
             setStatusMessage("Appointment rescheduled.");
@@ -524,7 +518,6 @@ function CancelAppointmentDialog({
 
             await axios.delete(
                 `${backendUrl}/appointments/${appointment.appointmentId}`,
-                axiosConfig,
             );
 
             router.refresh();
