@@ -28,7 +28,7 @@ type ApiResponse<T> = {
     data: T;
 };
 
-const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:3000";
+const backendUrl = "/api/backend";
 
 function normalizeNotification(payload: NotificationPayload) {
     if ("success" in payload) {
@@ -54,10 +54,8 @@ export function NotificationCenter() {
         async function loadNotifications() {
             try {
                 const [recentResponse, remindersResponse] = await Promise.all([
-                    fetch(`${backendUrl}/notifications`, { credentials: "include" }),
-                    fetch(`${backendUrl}/appointments/upcoming-reminders`, {
-                        credentials: "include",
-                    }),
+                    fetch(`${backendUrl}/notifications`),
+                    fetch(`${backendUrl}/appointments/upcoming-reminders`),
                 ]);
 
                 const recentBody = recentResponse.ok
@@ -77,9 +75,7 @@ export function NotificationCenter() {
 
         void loadNotifications();
 
-        const eventSource = new EventSource(`${backendUrl}/notifications/stream`, {
-            withCredentials: true,
-        });
+        const eventSource = new EventSource(`${backendUrl}/notifications/stream`);
 
         eventSource.onmessage = (event) => {
             const notification = normalizeNotification(JSON.parse(event.data) as NotificationPayload);
