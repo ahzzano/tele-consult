@@ -38,6 +38,11 @@ export class DoctorController {
     return this.doctorService.findAll(getDoctorDto);
   }
 
+  @Get('recommendations')
+  recommend(@Query('symptoms') symptoms = '') {
+    return this.doctorService.recommend(symptoms);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.doctorService.findOne(+id);

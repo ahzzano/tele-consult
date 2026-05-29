@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 
 export type ProfileActionState = {
@@ -98,4 +99,11 @@ export async function updateProfile(
         status: "success",
         message: "Profile updated.",
     };
+}
+
+export async function signOut() {
+    const cookieStore = await cookies();
+
+    cookieStore.delete("auth_token");
+    redirect("/login");
 }

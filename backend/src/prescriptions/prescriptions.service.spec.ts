@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrescriptionsService } from './prescriptions.service';
 import { DbService } from 'src/db/db.service';
+import { NotificationsService } from 'src/notifications/notifications.service';
 
 describe('PrescriptionsService', () => {
   let service: PrescriptionsService;
@@ -30,6 +31,12 @@ describe('PrescriptionsService', () => {
         {
           provide: DbService,
           useValue: dbService,
+        },
+        {
+          provide: NotificationsService,
+          useValue: {
+            notify: jest.fn(),
+          },
         },
       ],
     }).compile();
@@ -108,6 +115,9 @@ describe('PrescriptionsService', () => {
       dosage: 500,
     };
 
+    dbService.connection.select.mockReturnValueOnce(
+      createSelectMock([deletedPrescription]),
+    );
     dbService.connection.delete.mockReturnValue({
       where: jest.fn().mockReturnValue({
         returning: jest.fn().mockResolvedValue([deletedPrescription]),

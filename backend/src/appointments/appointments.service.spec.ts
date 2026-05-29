@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppointmentsService } from './appointments.service';
 import { DbService } from 'src/db/db.service';
+import { NotificationsService } from 'src/notifications/notifications.service';
 
 describe('AppointmentsService', () => {
   let service: AppointmentsService;
@@ -41,6 +42,12 @@ describe('AppointmentsService', () => {
               select,
               update,
             },
+          },
+        },
+        {
+          provide: NotificationsService,
+          useValue: {
+            notify: jest.fn(),
           },
         },
       ],

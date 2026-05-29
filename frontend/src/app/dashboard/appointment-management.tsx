@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Dialog } from "@base-ui/react/dialog";
 import axios from "axios";
-import { CalendarClock, Trash2, X } from "lucide-react";
+import { CalendarClock, ClipboardPlus, Pill, Trash2, Video, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -22,6 +22,7 @@ import {
     getSlotFromTimestamp,
     getWeekdayDate,
     ScheduleSlotPicker,
+    type BookedSlot,
     type AppointmentBlock,
     type ScheduleSlot,
 } from "./appointment-schedule";
@@ -95,6 +96,7 @@ export function PatientAppointments({
                                 </div>
 
                                 <div className="flex flex-wrap gap-2">
+                                    <JoinConsultationButton appointment={appointment} />
                                     <RescheduleAppointmentDialog appointment={appointment} />
                                     <CancelAppointmentDialog appointment={appointment} />
                                 </div>
@@ -111,6 +113,221 @@ export function PatientAppointments({
     );
 }
 
+export function DoctorAppointments({
+    appointments,
+}: {
+    appointments: Appointment[];
+}) {
+    return (
+        <Card className="md:col-span-2">
+            <CardHeader>
+                <CardTitle>Consultations</CardTitle>
+                <CardDescription>Join sessions and complete consultation notes.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {appointments.length > 0 ? (
+                    <div className="grid gap-3">
+                        {appointments.map((appointment) => (
+                            <div
+                                key={appointment.appointmentId}
+                                className="grid gap-3 rounded-lg border p-3 sm:grid-cols-[1fr_auto] sm:items-center"
+                            >
+                                <div className="min-w-0">
+                                    <div className="font-medium">
+                                        {getPatientName(appointment)}
+                                    </div>
+                                    <div className="text-sm text-muted-foreground">
+                                        {formatAppointmentTime(appointment.timeslot)}
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-wrap gap-2">
+                                    <JoinConsultationButton appointment={appointment} />
+                                    <ConsultationNotesDialog appointment={appointment} />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="text-sm text-muted-foreground">
+                        No consultations scheduled yet.
+                    </div>
+                )}
+            </CardContent>
+        </Card>
+    );
+}
+
+function JoinConsultationButton({ appointment }: { appointment: Appointment }) {
+    const sessionUrl =
+        appointment.sessionUrl ?? `https://meet.jit.si/tele-consult-${appointment.appointmentId}`;
+
+    return (
+        <a
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+            href={sessionUrl}
+            target="_blank"
+            rel="noreferrer"
+        >
+            <Video className="size-4" />
+            Join
+        </a>
+    );
+}
+
+function ConsultationNotesDialog({ appointment }: { appointment: Appointment }) {
+    const [isOpen, setIsOpen] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [statusMessage, setStatusMessage] = useState<string | null>(null);
+    const router = useRouter();
+
+    async function saveConsultation(formData: FormData) {
+        const diagnosis = String(formData.get("diagnosis") ?? "").trim();
+        const summary = String(formData.get("summary") ?? "").trim();
+        const followUpInstructions = String(formData.get("followUpInstructions") ?? "").trim();
+        const medicine = String(formData.get("medicine") ?? "").trim();
+        const dosageValue = String(formData.get("dosage") ?? "").trim();
+
+        if (!diagnosis || !summary) {
+            setStatusMessage("Diagnosis and summary are required.");
+            return;
+        }
+
+        try {
+            setIsSaving(true);
+            setStatusMessage(null);
+
+            const recordResponse = await axios.post<ApiResponse<{ id: number }>>(
+                `${backendUrl}/records`,
+                {
+                    appointmentId: appointment.appointmentId,
+                    patient: appointment.patientId,
+                    doctor: appointment.doctorId,
+                    diagnosis,
+                    summary,
+                    followUpInstructions,
+                },
+                axiosConfig,
+            );
+
+            if (medicine && dosageValue) {
+                await axios.post(
+                    `${backendUrl}/prescriptions`,
+                    {
+                        patient: appointment.patientId,
+                        doctor: appointment.doctorId,
+                        record: recordResponse.data.data.id,
+                        medicine,
+                        dosage: Number(dosageValue),
+                    },
+                    axiosConfig,
+                );
+            }
+
+            router.refresh();
+            setIsOpen(false);
+        } catch {
+            setStatusMessage("Unable to save consultation notes.");
+        } finally {
+            setIsSaving(false);
+        }
+    }
+
+    return (
+        <Dialog.Root open={isOpen} onOpenChange={setIsOpen}>
+            <Dialog.Trigger className={buttonVariants({ variant: "default", size: "sm" })}>
+                <ClipboardPlus className="size-4" />
+                Notes
+            </Dialog.Trigger>
+
+            <Dialog.Portal>
+                <Dialog.Backdrop className="fixed inset-0 z-50 bg-black/40" />
+                <Dialog.Popup className="fixed left-1/2 top-1/2 z-50 grid w-[min(640px,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-lg border bg-background p-5 shadow-xl">
+                    <div className="flex items-start justify-between gap-4">
+                        <div>
+                            <Dialog.Title className="text-lg font-semibold">
+                                Consultation notes
+                            </Dialog.Title>
+                            <Dialog.Description className="mt-1 text-sm text-muted-foreground">
+                                {getPatientName(appointment)} at {formatAppointmentTime(appointment.timeslot)}
+                            </Dialog.Description>
+                        </div>
+                        <Dialog.Close className={buttonVariants({ variant: "ghost", size: "icon" })}>
+                            <span className="sr-only">Close notes dialog</span>
+                            <X className="size-4" />
+                        </Dialog.Close>
+                    </div>
+
+                    <form action={saveConsultation} className="grid gap-3">
+                        <label className="grid gap-1 text-sm">
+                            <span className="font-medium">Diagnosis</span>
+                            <input
+                                name="diagnosis"
+                                className="h-9 rounded-lg border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-3 focus:ring-ring/20"
+                                required
+                            />
+                        </label>
+                        <label className="grid gap-1 text-sm">
+                            <span className="font-medium">Summary</span>
+                            <textarea
+                                name="summary"
+                                className="min-h-24 rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none transition-colors focus:border-ring focus:ring-3 focus:ring-ring/20"
+                                required
+                            />
+                        </label>
+                        <label className="grid gap-1 text-sm">
+                            <span className="font-medium">Follow-up Instructions</span>
+                            <textarea
+                                name="followUpInstructions"
+                                className="min-h-20 rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none transition-colors focus:border-ring focus:ring-3 focus:ring-ring/20"
+                            />
+                        </label>
+
+                        <div className="grid gap-3 rounded-lg border bg-muted/20 p-3 sm:grid-cols-[1fr_140px]">
+                            <label className="grid gap-1 text-sm">
+                                <span className="flex items-center gap-2 font-medium">
+                                    <Pill className="size-4 text-muted-foreground" />
+                                    Medicine
+                                </span>
+                                <input
+                                    name="medicine"
+                                    className="h-9 rounded-lg border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-3 focus:ring-ring/20"
+                                    placeholder="Optional"
+                                />
+                            </label>
+                            <label className="grid gap-1 text-sm">
+                                <span className="font-medium">Dosage</span>
+                                <input
+                                    name="dosage"
+                                    type="number"
+                                    min="0"
+                                    step="0.1"
+                                    className="h-9 rounded-lg border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-3 focus:ring-ring/20"
+                                    placeholder="Optional"
+                                />
+                            </label>
+                        </div>
+
+                        {statusMessage ? (
+                            <div className="text-sm text-destructive">{statusMessage}</div>
+                        ) : null}
+
+                        <div className="flex justify-end gap-2">
+                            <Dialog.Close className={buttonVariants({ variant: "outline" })}>
+                                Cancel
+                            </Dialog.Close>
+                            <Button type="submit" disabled={isSaving}>
+                                <ClipboardPlus className="size-4" />
+                                {isSaving ? "Saving" : "Save notes"}
+                            </Button>
+                        </div>
+                    </form>
+                </Dialog.Popup>
+            </Dialog.Portal>
+        </Dialog.Root>
+    );
+}
+
 function RescheduleAppointmentDialog({
     appointment,
 }: {
@@ -120,6 +337,7 @@ function RescheduleAppointmentDialog({
         formatDateInput(new Date(appointment.timeslot)),
     );
     const [appointmentBlocks, setAppointmentBlocks] = useState<AppointmentBlock[]>([]);
+    const [bookedSlots, setBookedSlots] = useState<BookedSlot[]>([]);
     const [selectedSlot, setSelectedSlot] = useState<ScheduleSlot | null>(() =>
         getSlotFromTimestamp(appointment.timeslot),
     );
@@ -138,8 +356,19 @@ function RescheduleAppointmentDialog({
                 `${backendUrl}/doctor/${appointment.doctorId}/appointment-blocks`,
                 axiosConfig,
             );
+            const bookedSlotsResponse = await axios.get<ApiResponse<BookedSlot[]>>(
+                `${backendUrl}/appointments/doctor/${appointment.doctorId}/booked-slots`,
+                axiosConfig,
+            );
 
             setAppointmentBlocks(Array.isArray(response.data.data) ? response.data.data : []);
+            setBookedSlots(
+                Array.isArray(bookedSlotsResponse.data.data)
+                    ? bookedSlotsResponse.data.data.filter(
+                          (slot) => slot.appointmentId !== appointment.appointmentId,
+                      )
+                    : [],
+            );
         } catch {
             setStatusMessage("Unable to load this doctor's schedule.");
         } finally {
@@ -243,6 +472,7 @@ function RescheduleAppointmentDialog({
 
                         <ScheduleSlotPicker
                             appointmentBlocks={appointmentBlocks}
+                            bookedSlots={bookedSlots}
                             date={date}
                             selectedSlot={selectedSlot}
                             disabled={isSaving || isLoadingSchedule}

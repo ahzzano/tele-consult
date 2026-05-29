@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CalendarPlus, Search, SlidersHorizontal, Stethoscope } from "lucide-react";
+import { CalendarPlus, Search, SlidersHorizontal, Sparkles, Stethoscope } from "lucide-react";
 import { Dialog } from "@base-ui/react/dialog";
 import { useRouter } from "next/navigation";
 import axios from "axios";
@@ -21,6 +21,7 @@ import {
     getAppointmentTimestamp,
     getWeekdayDate,
     ScheduleSlotPicker,
+    type BookedSlot,
     type AppointmentBlock,
     type ScheduleSlot,
 } from "./appointment-schedule";
@@ -38,6 +39,12 @@ type ApiResponse<T> = {
     data: T;
 };
 
+type Recommendation = {
+    specialization: string;
+    reason: string;
+    doctors: DoctorSearchResult[];
+};
+
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:3000";
 const axiosConfig = { withCredentials: true };
 
@@ -52,6 +59,9 @@ export function PatientDoctorSearch({ patientId }: { patientId: number }) {
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [query, setQuery] = useState("");
     const [specialization, setSpecialization] = useState("All");
+    const [symptoms, setSymptoms] = useState("");
+    const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
+    const [isRecommending, setIsRecommending] = useState(false);
 
     useEffect(() => {
         let isMounted = true;
@@ -119,8 +129,71 @@ export function PatientDoctorSearch({ patientId }: { patientId: number }) {
         };
     }, [query, specialization]);
 
+    async function recommendDoctor() {
+        if (!symptoms.trim()) {
+            setRecommendation(null);
+            setErrorMessage("Describe symptoms or care needs to get a recommendation.");
+            return;
+        }
+
+        try {
+            setIsRecommending(true);
+            setErrorMessage(null);
+
+            const response = await axios.get<ApiResponse<Recommendation>>(
+                `${backendUrl}/doctor/recommendations`,
+                {
+                    params: { symptoms },
+                    withCredentials: true,
+                },
+            );
+
+            setRecommendation(response.data.data);
+            setSpecialization(response.data.data.specialization);
+            setDoctors(response.data.data.doctors);
+        } catch {
+            setErrorMessage("Unable to recommend a doctor right now.");
+        } finally {
+            setIsRecommending(false);
+        }
+    }
+
     return (
         <section className="flex flex-col gap-4">
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Sparkles className="size-4 text-emerald-700" />
+                        Care Match
+                    </CardTitle>
+                    <CardDescription>Describe symptoms to match with a relevant specialty.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-3">
+                    <textarea
+                        value={symptoms}
+                        onChange={(event) => setSymptoms(event.target.value)}
+                        placeholder="Headache for three days, dizziness, skin rash, chest pain..."
+                        className="min-h-20 rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-ring focus:ring-3 focus:ring-ring/20"
+                    />
+                    <div className="flex flex-wrap items-center gap-3">
+                        <button
+                            type="button"
+                            onClick={recommendDoctor}
+                            disabled={isRecommending}
+                            className={buttonVariants()}
+                        >
+                            <Sparkles className="size-4" />
+                            {isRecommending ? "Matching" : "Recommend"}
+                        </button>
+                        {recommendation ? (
+                            <span className="text-sm text-muted-foreground">
+                                Suggested: {recommendation.specialization}. {recommendation.reason}
+                            </span>
+                        ) : null}
+                    </div>
+                </CardContent>
+            </Card>
+
             <Card>
                 <CardHeader>
                     <CardTitle>Find a Doctor</CardTitle>
@@ -218,6 +291,7 @@ function DoctorBookingDialog({
 }) {
     const [date, setDate] = useState(() => formatDateInput(new Date()));
     const [appointmentBlocks, setAppointmentBlocks] = useState<AppointmentBlock[]>([]);
+    const [bookedSlots, setBookedSlots] = useState<BookedSlot[]>([]);
     const [isLoadingSchedule, setIsLoadingSchedule] = useState(false);
     const [selectedSlot, setSelectedSlot] = useState<{
         dayOfWeek: number;
@@ -237,8 +311,17 @@ function DoctorBookingDialog({
                 `${backendUrl}/doctor/${doctor.id}/appointment-blocks`,
                 axiosConfig,
             );
+            const bookedSlotsResponse = await axios.get<ApiResponse<BookedSlot[]>>(
+                `${backendUrl}/appointments/doctor/${doctor.id}/booked-slots`,
+                axiosConfig,
+            );
 
             setAppointmentBlocks(Array.isArray(response.data.data) ? response.data.data : []);
+            setBookedSlots(
+                Array.isArray(bookedSlotsResponse.data.data)
+                    ? bookedSlotsResponse.data.data
+                    : [],
+            );
         } catch {
             setStatusMessage("Unable to load this doctor's schedule.");
         } finally {
@@ -336,6 +419,7 @@ function DoctorBookingDialog({
 
                         <ScheduleSlotPicker
                             appointmentBlocks={appointmentBlocks}
+                            bookedSlots={bookedSlots}
                             date={date}
                             selectedSlot={selectedSlot}
                             disabled={isBooking || isLoadingSchedule}

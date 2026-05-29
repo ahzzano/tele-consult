@@ -9,10 +9,14 @@ import { UpdateRecordDto } from './dto/update-record.dto';
 import { DbService } from 'src/db/db.service';
 import { appointment, doctor, medicalRecord, patient } from 'src/db/schema';
 import { eq, SQL, and } from 'drizzle-orm';
+import { NotificationsService } from 'src/notifications/notifications.service';
 
 @Injectable()
 export class RecordsService {
-    constructor(private dbService: DbService) { }
+    constructor(
+        private dbService: DbService,
+        private notificationsService: NotificationsService,
+    ) { }
 
     async create(createRecordDto: CreateRecordDto, actorId?: number) {
         this.validateRecordData(createRecordDto);
@@ -43,10 +47,18 @@ export class RecordsService {
 
         await this.ensureRecordAppointmentMatches(createRecordDto);
 
-        return await this.dbService.connection
+        const [newRecord] = await this.dbService.connection
             .insert(medicalRecord)
             .values(createRecordDto)
-            .returning()
+            .returning();
+
+        this.notificationsService.notify(
+            createRecordDto.patient,
+            'Consultation notes added',
+            'Your doctor added medical notes to your consultation record.',
+        );
+
+        return newRecord;
     }
 
     async findAll(query: { doctor?: number, patient?: number }, actorId?: number) {

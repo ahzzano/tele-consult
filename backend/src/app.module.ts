@@ -10,6 +10,7 @@ import { AuthModule } from './auth/auth.module';
 import { AppointmentsModule } from './appointments/appointments.module';
 import { RecordsModule } from './records/records.module';
 import { PrescriptionsModule } from './prescriptions/prescriptions.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
     imports: [
@@ -19,6 +20,7 @@ import { PrescriptionsModule } from './prescriptions/prescriptions.module';
         DoctorModule,
         PatientModule,
         AuthModule,
+        NotificationsModule,
         AppointmentsModule,
         RecordsModule,
         PrescriptionsModule,

@@ -63,6 +63,10 @@ export default async function DashboardPage() {
         },
     );
 
+    if (profileResponse.status === 401 || profileResponse.status === 403) {
+        redirect("/login");
+    }
+
     if (!profileResponse.ok) {
         throw new Error("Failed to load profile");
     }

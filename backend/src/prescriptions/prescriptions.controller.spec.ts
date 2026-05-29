@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrescriptionsController } from './prescriptions.controller';
 import { PrescriptionsService } from './prescriptions.service';
+import { AuthGuard } from 'src/auth/auth.guard';
 
 describe('PrescriptionsController', () => {
   let controller: PrescriptionsController;
@@ -21,7 +22,10 @@ describe('PrescriptionsController', () => {
           useValue: prescriptionsService,
         },
       ],
-    }).compile();
+    })
+      .overrideGuard(AuthGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get<PrescriptionsController>(PrescriptionsController);
   });

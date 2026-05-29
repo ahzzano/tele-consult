@@ -28,6 +28,16 @@ export class AppointmentsController {
     return await this.appointmentsService.findAll(getAppointmentDto, user.id);
   }
 
+  @Get('upcoming-reminders')
+  async findUpcomingReminders(@CurrentUser() user: AuthUser) {
+    return await this.appointmentsService.findUpcomingReminders(user.id);
+  }
+
+  @Get('doctor/:id/booked-slots')
+  async findBookedSlots(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return await this.appointmentsService.findBookedSlots(+id, user.id);
+  }
+
   @Patch(':id')
   update(
     @Param('id') id: string,

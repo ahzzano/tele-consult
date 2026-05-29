@@ -1,11 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppointmentsController } from './appointments.controller';
 import { AppointmentsService } from './appointments.service';
+import { AuthGuard } from 'src/auth/auth.guard';
 
 describe('AppointmentsController', () => {
   let controller: AppointmentsController;
   const appointmentsService = {
+    create: jest.fn(),
+    findAll: jest.fn(),
+    findBookedSlots: jest.fn(),
+    update: jest.fn(),
     reschedule: jest.fn(),
+    remove: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -17,7 +23,10 @@ describe('AppointmentsController', () => {
           useValue: appointmentsService,
         },
       ],
-    }).compile();
+    })
+      .overrideGuard(AuthGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get<AppointmentsController>(AppointmentsController);
   });
@@ -32,8 +41,8 @@ describe('AppointmentsController', () => {
       dayOfWeek: 1,
     };
 
-    controller.reschedule('12', dto);
+    controller.reschedule('12', dto, { id: 3, email: 'user@example.com' });
 
-    expect(appointmentsService.reschedule).toHaveBeenCalledWith(12, dto);
+    expect(appointmentsService.reschedule).toHaveBeenCalledWith(12, dto, 3);
   });
 });

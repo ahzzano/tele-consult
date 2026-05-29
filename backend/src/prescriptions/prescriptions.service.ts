@@ -9,10 +9,14 @@ import { UpdatePrescriptionDto } from './dto/update-prescription.dto';
 import { DbService } from 'src/db/db.service';
 import { doctor, medicalRecord, patient, prescription } from 'src/db/schema';
 import { and, eq, SQL } from 'drizzle-orm';
+import { NotificationsService } from 'src/notifications/notifications.service';
 
 @Injectable()
 export class PrescriptionsService {
-    constructor(private dbService: DbService) { }
+    constructor(
+        private dbService: DbService,
+        private notificationsService: NotificationsService,
+    ) { }
 
     async create(createPrescriptionDto: CreatePrescriptionDto, actorId?: number) {
         if (actorId !== undefined && actorId !== createPrescriptionDto.doctor) {
@@ -26,6 +30,12 @@ export class PrescriptionsService {
             .insert(prescription)
             .values(createPrescriptionDto)
             .returning();
+
+        this.notificationsService.notify(
+            createPrescriptionDto.patient,
+            'Prescription added',
+            `Your doctor added ${createPrescriptionDto.medicine} to your prescription record.`,
+        );
 
         return newPrescription;
     }

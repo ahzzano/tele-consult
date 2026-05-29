@@ -58,6 +58,10 @@ export default async function ProfilePage() {
         headers: authHeaders,
     });
 
+    if (response.status === 401 || response.status === 403) {
+        redirect("/login");
+    }
+
     if (!response.ok) {
         throw new Error("Failed to load profile");
     }

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 
 const appointmentBlockSchema = z.object({
@@ -70,4 +71,11 @@ export async function updateDoctorAppointmentBlocks(
         status: "success",
         message: "Consultation hours saved.",
     };
+}
+
+export async function signOut() {
+    const cookieStore = await cookies();
+
+    cookieStore.delete("auth_token");
+    redirect("/login");
 }

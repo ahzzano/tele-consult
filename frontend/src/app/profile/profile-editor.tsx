@@ -3,10 +3,12 @@
 import { useActionState, useMemo, useState } from "react";
 import { Input } from "@base-ui/react";
 import {
+    ArrowLeft,
     CalendarDays,
     ClipboardList,
     Edit,
     KeyRound,
+    LogOut,
     Mail,
     Pill,
     Ruler,
@@ -16,11 +18,12 @@ import {
     UserRound,
     X,
 } from "lucide-react";
+import Link from "next/link";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { type ProfileActionState, updateProfile } from "./actions";
+import { signOut, type ProfileActionState, updateProfile } from "./actions";
 
 export type AccountProfile = {
     id: number;
@@ -122,10 +125,28 @@ export function ProfileEditor({ profile }: { profile: AccountProfile }) {
                     </div>
                 </div>
 
-                <Button type="button" variant={isEditing ? "outline" : "default"} onClick={() => setIsEditing(!isEditing)}>
-                    {isEditing ? <X className="size-4" /> : <Edit className="size-4" />}
-                    {isEditing ? "Cancel" : "Edit profile"}
-                </Button>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <Link
+                        href="/dashboard"
+                        className={buttonVariants({
+                            variant: "outline",
+                            className: "w-full sm:w-auto",
+                        })}
+                    >
+                        <ArrowLeft className="size-4" />
+                        Dashboard
+                    </Link>
+                    <Button type="button" variant={isEditing ? "outline" : "default"} onClick={() => setIsEditing(!isEditing)}>
+                        {isEditing ? <X className="size-4" /> : <Edit className="size-4" />}
+                        {isEditing ? "Cancel" : "Edit profile"}
+                    </Button>
+                    <form action={signOut}>
+                        <Button type="submit" variant="ghost" className="w-full sm:w-auto">
+                            <LogOut className="size-4" />
+                            Sign out
+                        </Button>
+                    </form>
+                </div>
             </div>
 
             {isEditing ? (
