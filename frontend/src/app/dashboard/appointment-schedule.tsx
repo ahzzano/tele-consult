@@ -17,6 +17,12 @@ export type ScheduleSlot = {
     slotIndex: number;
 };
 
+export type BookedSlot = {
+    appointmentId: number;
+    timeslot: string;
+    day: number;
+};
+
 export const days = [
     { label: "Sunday", shortLabel: "Sun" },
     { label: "Monday", shortLabel: "Mon" },
@@ -32,6 +38,7 @@ export const endHour = 22;
 export const slotMinutes = 30;
 const slotsPerHour = 60 / slotMinutes;
 const slotCount = (endHour - startHour) * slotsPerHour;
+const appointmentSlotLength = 3;
 
 export function formatDateInput(date: Date) {
     const year = date.getFullYear();
@@ -136,14 +143,45 @@ export function getSlotFromTimestamp(timestamp: string): ScheduleSlot | null {
     };
 }
 
+function bookedSlotIndexesForDay(bookedSlots: BookedSlot[], dayOfWeek: number) {
+    return bookedSlots
+        .filter((slot) => slot.day === dayOfWeek)
+        .map((slot) => getSlotIndexFromTimestamp(slot.timeslot))
+        .filter((slot): slot is number => slot !== null);
+}
+
+function isSlotBookable(
+    availability: boolean[][],
+    bookedSlots: BookedSlot[],
+    dayOfWeek: number,
+    slotIndex: number,
+) {
+    const hasEnoughAvailableTime = Array.from({ length: appointmentSlotLength }).every(
+        (_, offset) => availability[dayOfWeek][slotIndex + offset],
+    );
+
+    if (!hasEnoughAvailableTime) {
+        return false;
+    }
+
+    return !bookedSlotIndexesForDay(bookedSlots, dayOfWeek).some((bookedSlotIndex) => {
+        const requestedEnd = slotIndex + appointmentSlotLength;
+        const bookedEnd = bookedSlotIndex + appointmentSlotLength;
+
+        return slotIndex < bookedEnd && requestedEnd > bookedSlotIndex;
+    });
+}
+
 export function ScheduleSlotPicker({
     appointmentBlocks,
+    bookedSlots = [],
     date,
     selectedSlot,
     disabled = false,
     onSelectSlot,
 }: {
     appointmentBlocks: AppointmentBlock[];
+    bookedSlots?: BookedSlot[];
     date: string;
     selectedSlot: ScheduleSlot | null;
     disabled?: boolean;
@@ -195,7 +233,12 @@ export function ScheduleSlotPicker({
                                 </div>
 
                                 {days.map((day, dayOfWeek) => {
-                                    const isAvailable = availability[dayOfWeek][slotIndex];
+                                    const isAvailable = isSlotBookable(
+                                        availability,
+                                        bookedSlots,
+                                        dayOfWeek,
+                                        slotIndex,
+                                    );
                                     const aboveAvailable =
                                         slotIndex > 0 &&
                                         availability[dayOfWeek][slotIndex - 1];

@@ -4,7 +4,10 @@ import { ResponseInterceptor } from './common/interceptors/response.interceptor'
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.enableCors();
+  app.enableCors({
+    origin: true,
+    credentials: true,
+  });
   app.useGlobalInterceptors(new ResponseInterceptor())
   await app.listen(process.env.PORT ?? 3000);
 }

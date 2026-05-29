@@ -12,6 +12,11 @@ type ProfileResponse = {
     data: AccountProfile | null;
 };
 
+type ApiResponse<T> = {
+    success: boolean;
+    data: T;
+};
+
 function decodeJwtPayload(token: string): AuthTokenPayload {
     const payload = token.split(".")[1];
 
@@ -40,6 +45,9 @@ export default async function ProfilePage() {
     }
 
     const tokenPayload = decodeJwtPayload(token);
+    const authHeaders = {
+        Authorization: `Bearer ${token}`,
+    };
 
     if (!tokenPayload.email) {
         redirect("/login");
@@ -47,7 +55,12 @@ export default async function ProfilePage() {
 
     const response = await fetch(`${backendUrl}/account/${encodeURIComponent(tokenPayload.email)}`, {
         cache: "no-store",
+        headers: authHeaders,
     });
+
+    if (response.status === 401 || response.status === 403) {
+        redirect("/login");
+    }
 
     if (!response.ok) {
         throw new Error("Failed to load profile");
@@ -60,9 +73,50 @@ export default async function ProfilePage() {
         redirect("/login");
     }
 
+    const recordsQueryKey = profile.role === "Doctor" ? "doctor" : "patient";
+    const recordsResponse = await fetch(
+        `${backendUrl}/records?${recordsQueryKey}=${profile.id}`,
+        {
+            cache: "no-store",
+            headers: authHeaders,
+        },
+    );
+
+    if (!recordsResponse.ok) {
+        throw new Error("Failed to load medical records");
+    }
+
+    const prescriptionsResponse = await fetch(
+        `${backendUrl}/prescriptions?${recordsQueryKey}=${profile.id}`,
+        {
+            cache: "no-store",
+            headers: authHeaders,
+        },
+    );
+
+    if (!prescriptionsResponse.ok) {
+        throw new Error("Failed to load prescriptions");
+    }
+
+    const recordsBody =
+        (await recordsResponse.json()) as ApiResponse<AccountProfile["medicalRecords"]>;
+    const prescriptionsBody =
+        (await prescriptionsResponse.json()) as ApiResponse<AccountProfile["prescriptions"]>;
+
+    const medicalRecords = recordsBody.data.toSorted(
+        (left, right) =>
+            new Date(right.createdAt ?? 0).getTime() - new Date(left.createdAt ?? 0).getTime(),
+    );
+
     return (
         <main className="min-h-screen bg-muted/30">
-            <ProfileEditor profile={profile} />
+            <ProfileEditor
+                profile={{
+                    ...profile,
+                    medicalRecords,
+                    prescriptions: prescriptionsBody.data,
+                }}
+            />
         </main>
     );
 }

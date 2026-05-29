@@ -4,6 +4,7 @@ export type Appointment = {
     patientId: number;
     timeslot: string;
     day: number;
+    sessionUrl?: string | null;
     doctorFirstName?: string | null;
     doctorLastName?: string | null;
     doctorName?: string | null;

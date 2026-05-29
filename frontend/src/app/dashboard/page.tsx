@@ -47,6 +47,9 @@ export default async function DashboardPage() {
     }
 
     const tokenPayload = decodeJwtPayload(token);
+    const authHeaders = {
+        Authorization: `Bearer ${token}`,
+    };
 
     if (!tokenPayload.email) {
         redirect("/login");
@@ -56,8 +59,13 @@ export default async function DashboardPage() {
         `${backendUrl}/account/${encodeURIComponent(tokenPayload.email)}`,
         {
             cache: "no-store",
+            headers: authHeaders,
         },
     );
+
+    if (profileResponse.status === 401 || profileResponse.status === 403) {
+        redirect("/login");
+    }
 
     if (!profileResponse.ok) {
         throw new Error("Failed to load profile");
@@ -78,6 +86,7 @@ export default async function DashboardPage() {
             `${backendUrl}/doctor/${profile.id}/appointment-blocks`,
             {
                 cache: "no-store",
+                headers: authHeaders,
             },
         );
 
@@ -95,6 +104,7 @@ export default async function DashboardPage() {
         `${backendUrl}/appointments?${appointmentsQueryKey}=${profile.id}`,
         {
             cache: "no-store",
+            headers: authHeaders,
         },
     );
 

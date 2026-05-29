@@ -235,6 +235,17 @@ export function DoctorAvailabilityPlanner({
         return selectedSlots * (slotMinutes / 60);
     }, [availability]);
 
+    const workingDaySummaries = useMemo(
+        () =>
+            days
+                .map((day) => ({
+                    ...day,
+                    ranges: getDayRanges(availability[day.key]),
+                }))
+                .filter((day) => day.ranges.length > 0),
+        [availability],
+    );
+
     function handlePointerDown(
         event: ReactPointerEvent<HTMLButtonElement>,
         dayIndex: number,
@@ -297,27 +308,25 @@ export function DoctorAvailabilityPlanner({
     }
 
     const daySummary = (
-        <div className="grid gap-3 md:grid-cols-7">
-            {days.map((day) => {
-                const ranges = getDayRanges(availability[day.key]);
-
-                return (
+        <div className="space-y-3">
+            {workingDaySummaries.length > 0 ? (
+                workingDaySummaries.map((day) => (
                     <div key={day.key} className="rounded-lg border bg-background p-3">
-                        <div className="text-sm font-medium">{day.shortLabel}</div>
+                        <div className="text-sm font-medium">{day.label}</div>
                         <div className="mt-2 space-y-1 text-xs text-muted-foreground">
-                            {ranges.length > 0 ? (
-                                ranges.map((range) => (
-                                    <div key={`${range.start}-${range.end}`}>
-                                        {formatTime(range.start)} - {formatTime(range.end)}
-                                    </div>
-                                ))
-                            ) : (
-                                <div>Unavailable</div>
-                            )}
+                            {day.ranges.map((range) => (
+                                <div key={`${range.start}-${range.end}`}>
+                                    {formatTime(range.start)} - {formatTime(range.end)}
+                                </div>
+                            ))}
                         </div>
                     </div>
-                );
-            })}
+                ))
+            ) : (
+                <div className="rounded-lg border bg-background p-3 text-sm text-muted-foreground">
+                    No working days selected.
+                </div>
+            )}
         </div>
     );
 
@@ -396,7 +405,7 @@ export function DoctorAvailabilityPlanner({
                 </div>
             </CardHeader>
 
-            <CardContent className="flex min-h-0 flex-1 flex-col gap-7 px-6 pb-6">
+            <CardContent className="flex min-h-0 flex-1 flex-col gap-5 px-6 pb-6">
                 <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                     <span className="rounded-md bg-emerald-50 px-2 py-1 font-medium text-emerald-800 ring-1 ring-emerald-200">
                         {totalHours.toFixed(totalHours % 1 === 0 ? 0 : 1)} hours weekly
@@ -415,94 +424,101 @@ export function DoctorAvailabilityPlanner({
                     )}
                 </div>
 
-                <div className="min-h-0 flex-1 overflow-auto rounded-lg border bg-background">
-                    <div className="min-w-[860px]">
-                        <div className="grid grid-cols-[72px_repeat(7,minmax(104px,1fr))] border-b bg-muted/50">
-                            <div className="px-3 py-3 text-xs font-medium uppercase text-muted-foreground">
-                                Time
-                            </div>
-                            {days.map((day) => (
-                                <div
-                                    key={day.key}
-                                    className="border-l px-3 py-3 text-center text-sm font-medium"
-                                >
-                                    <span className="hidden sm:inline">{day.label}</span>
-                                    <span className="sm:hidden">{day.shortLabel}</span>
+                <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
+                    <div className="min-h-0 overflow-auto rounded-lg border bg-background">
+                        <div className="min-w-[860px]">
+                            <div className="sticky top-0 z-20 grid grid-cols-[72px_repeat(7,minmax(104px,1fr))] border-b bg-muted">
+                                <div className="px-3 py-3 text-xs font-medium uppercase text-muted-foreground">
+                                    Time
                                 </div>
-                            ))}
-                        </div>
-
-                        <div
-                            className="grid select-none grid-cols-[72px_repeat(7,minmax(104px,1fr))]"
-                            onPointerMove={handlePointerMove}
-                            style={{ touchAction: "none" }}
-                        >
-                            <div className="h-4" />
-                            {days.map((day) => (
-                                <div
-                                    key={`${day.key}-top-spacer`}
-                                    aria-hidden="true"
-                                    className="h-4 border-l bg-background"
-                                />
-                            ))}
-
-                            {Array.from({ length: slotCount }).map((_, slotIndex) => {
-                                const showTime = slotIndex % slotsPerHour === 0;
-
-                                return (
-                                    <div key={slotIndex} className="contents">
-                                        <div
-                                            className="relative h-8 border-t text-xs text-muted-foreground"
-                                        >
-                                            {showTime ? (
-                                                <span className="absolute right-2 top-0 -translate-y-1/2 bg-background px-1">
-                                                    {formatTime(slotIndex)}
-                                                </span>
-                                            ) : null}
-                                        </div>
-
-                                        {days.map((day, dayIndex) => {
-                                            const selected = previewAvailability[day.key][slotIndex];
-                                            const aboveSelected =
-                                                slotIndex > 0 &&
-                                                previewAvailability[day.key][slotIndex - 1];
-                                            const belowSelected =
-                                                slotIndex < slotCount - 1 &&
-                                                previewAvailability[day.key][slotIndex + 1];
-
-                                            return (
-                                                <button
-                                                    key={`${day.key}-${slotIndex}`}
-                                                    type="button"
-                                                    aria-label={`${day.label} ${formatTime(slotIndex)}`}
-                                                    data-day-index={dayIndex}
-                                                    data-slot-index={slotIndex}
-                                                    onPointerDown={(event) =>
-                                                        handlePointerDown(event, dayIndex, slotIndex)
-                                                    }
-                                                    className={cn(
-                                                        "relative h-8 border-l border-t bg-background transition-colors hover:bg-emerald-50 focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-ring",
-                                                        selected &&
-                                                        "before:pointer-events-none before:absolute before:inset-x-1 before:inset-y-0 before:border-x before:border-emerald-600 before:bg-emerald-500/20 before:content-[''] hover:before:bg-emerald-500/25",
-                                                        selected &&
-                                                        !aboveSelected &&
-                                                        "before:top-1 before:rounded-t-md before:border-t",
-                                                        selected &&
-                                                        !belowSelected &&
-                                                        "before:bottom-1 before:rounded-b-md before:border-b",
-                                                    )}
-                                                />
-                                            );
-                                        })}
+                                {days.map((day) => (
+                                    <div
+                                        key={day.key}
+                                        className="border-l px-3 py-3 text-center text-sm font-medium"
+                                    >
+                                        <span className="hidden sm:inline">{day.label}</span>
+                                        <span className="sm:hidden">{day.shortLabel}</span>
                                     </div>
-                                );
-                            })}
+                                ))}
+                            </div>
+
+                            <div
+                                className="grid select-none grid-cols-[72px_repeat(7,minmax(104px,1fr))]"
+                                onPointerMove={handlePointerMove}
+                                style={{ touchAction: "none" }}
+                            >
+                                <div className="h-4" />
+                                {days.map((day) => (
+                                    <div
+                                        key={`${day.key}-top-spacer`}
+                                        aria-hidden="true"
+                                        className="h-4 border-l bg-background"
+                                    />
+                                ))}
+
+                                {Array.from({ length: slotCount }).map((_, slotIndex) => {
+                                    const showTime = slotIndex % slotsPerHour === 0;
+
+                                    return (
+                                        <div key={slotIndex} className="contents">
+                                            <div
+                                                className="relative h-8 border-t text-xs text-muted-foreground"
+                                            >
+                                                {showTime ? (
+                                                    <span className="absolute right-2 top-0 -translate-y-1/2 bg-background px-1">
+                                                        {formatTime(slotIndex)}
+                                                    </span>
+                                                ) : null}
+                                            </div>
+
+                                            {days.map((day, dayIndex) => {
+                                                const selected =
+                                                    previewAvailability[day.key][slotIndex];
+                                                const aboveSelected =
+                                                    slotIndex > 0 &&
+                                                    previewAvailability[day.key][slotIndex - 1];
+                                                const belowSelected =
+                                                    slotIndex < slotCount - 1 &&
+                                                    previewAvailability[day.key][slotIndex + 1];
+
+                                                return (
+                                                    <button
+                                                        key={`${day.key}-${slotIndex}`}
+                                                        type="button"
+                                                        aria-label={`${day.label} ${formatTime(slotIndex)}`}
+                                                        data-day-index={dayIndex}
+                                                        data-slot-index={slotIndex}
+                                                        onPointerDown={(event) =>
+                                                            handlePointerDown(
+                                                                event,
+                                                                dayIndex,
+                                                                slotIndex,
+                                                            )
+                                                        }
+                                                        className={cn(
+                                                            "relative h-8 border-l border-t bg-background transition-colors hover:bg-emerald-50 focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-ring",
+                                                            selected &&
+                                                                "before:pointer-events-none before:absolute before:inset-x-1 before:inset-y-0 before:border-x before:border-emerald-600 before:bg-emerald-500/20 before:content-[''] hover:before:bg-emerald-500/25",
+                                                            selected &&
+                                                                !aboveSelected &&
+                                                                "before:top-1 before:rounded-t-md before:border-t",
+                                                            selected &&
+                                                                !belowSelected &&
+                                                                "before:bottom-1 before:rounded-b-md before:border-b",
+                                                        )}
+                                                    />
+                                                );
+                                            })}
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div className="shrink-0">
-                    {daySummary}
+                    <div className="min-h-0 overflow-auto lg:pr-1">
+                        {daySummary}
+                    </div>
                 </div>
             </CardContent>
                 </Dialog.Popup>

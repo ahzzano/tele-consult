@@ -1,23 +1,25 @@
 "use client";
 
-import { useState } from "react";
-import { CalendarDays, ClipboardList, Stethoscope, UserRound } from "lucide-react";
-
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { CalendarDays, ClipboardList, LogOut, Stethoscope } from "lucide-react";
 import Link from "next/link";
+
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { signOut } from "./actions";
 import {
-    DoctorAvailabilityPlanner,
-    type AppointmentBlock,
-} from "./doctor-availability-planner";
-import { PatientDoctorSearch } from "./patient-doctor-search";
-import {
+    DoctorAppointments,
     formatAppointmentTime,
     getDoctorName,
     getPatientName,
     PatientAppointments,
 } from "./appointment-management";
 import type { Appointment } from "./dashboard-types";
+import {
+    DoctorAvailabilityPlanner,
+    type AppointmentBlock,
+} from "./doctor-availability-planner";
+import { NotificationCenter } from "./notification-center";
+import { PatientDoctorSearch } from "./patient-doctor-search";
 
 type DashboardMode = "Patient" | "Doctor";
 
@@ -30,61 +32,41 @@ type DashboardModeSwitcherProps = {
     appointments: Appointment[];
 };
 
-const modeButtonClassName =
-    "flex h-9 items-center justify-center gap-2 rounded-md text-sm font-medium transition-colors";
-
 export function DashboardModeSwitcher({
     profile,
     appointmentBlocks,
     appointments,
 }: DashboardModeSwitcherProps) {
-    const [mode, setMode] = useState<DashboardMode>(profile.role);
-
     return (
         <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 sm:p-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 className="text-2xl font-semibold tracking-normal">Dashboard</h1>
                     <p className="text-sm text-muted-foreground">
-                        Viewing as {mode.toLowerCase()}.
+                        Viewing as {profile.role.toLowerCase()}.
                     </p>
                 </div>
 
-                <div className="grid w-full grid-cols-2 gap-2 rounded-lg bg-muted p-1 sm:w-80">
-                    <button
-                        type="button"
-                        aria-pressed={mode === "Patient"}
-                        disabled={profile.role !== "Patient"}
-                        onClick={() => setMode("Patient")}
-                        className={`${modeButtonClassName} ${mode === "Patient"
-                            ? "bg-background text-foreground shadow-sm"
-                            : "text-muted-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:text-muted-foreground"
-                            }`}
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <Link
+                        href="/profile"
+                        className={buttonVariants({
+                            variant: "outline",
+                            className: "w-full sm:w-auto",
+                        })}
                     >
-                        <UserRound className="size-4" />
-                        Patient
-                    </button>
-                    <button
-                        type="button"
-                        aria-pressed={mode === "Doctor"}
-                        disabled={profile.role !== "Doctor"}
-                        onClick={() => setMode("Doctor")}
-                        className={`${modeButtonClassName} ${mode === "Doctor"
-                            ? "bg-background text-foreground shadow-sm"
-                            : "text-muted-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:text-muted-foreground"
-                            }`}
-                    >
-                        <Stethoscope className="size-4" />
-                        Doctor
-                    </button>
-                </div>
-                <div>
-                    <Button variant="link">
-                        <Link href="/profile">Profile</Link>
-                    </Button>
+                        Profile
+                    </Link>
+                    <form action={signOut}>
+                        <Button type="submit" variant="outline" className="w-full sm:w-auto">
+                            <LogOut className="size-4" />
+                            Sign out
+                        </Button>
+                    </form>
                 </div>
             </div>
-            {mode === "Patient" ? (
+            <NotificationCenter />
+            {profile.role === "Patient" ? (
                 <PatientDashboard patientId={profile.id} appointments={appointments} />
             ) : (
                 <DoctorDashboard
@@ -204,6 +186,7 @@ function DoctorDashboard({
                 doctorId={doctorId}
                 initialAppointmentBlocks={appointmentBlocks}
             />
+            <DoctorAppointments appointments={appointments} />
         </div>
     );
 }

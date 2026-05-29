@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 
 export type ProfileActionState = {
@@ -29,6 +31,10 @@ const profileSchema = z.object({
     firstName: z.string().trim().min(1, "First name is required"),
     lastName: z.string().trim().min(1, "Last name is required"),
     email: z.email().trim(),
+    password: z.preprocess(
+        (value) => (value === "" ? undefined : value),
+        z.string().min(8, "Password must be at least 8 characters").optional()
+    ),
     profilePicture: optionalUrl,
     birthday: optionalText,
     contactDetails: optionalText,
@@ -49,6 +55,8 @@ export async function updateProfile(
         throw new Error("BACKEND_URL is not configured");
     }
 
+    const token = (await cookies()).get("auth_token")?.value;
+
     const raw = Object.fromEntries(formData.entries());
     const result = profileSchema.safeParse({
         ...raw,
@@ -61,11 +69,19 @@ export async function updateProfile(
         };
     }
 
-    const { id, ...payload } = result.data;
+    const { id, password, ...profilePayload } = result.data;
+    const payload = password
+        ? {
+              ...profilePayload,
+              password,
+          }
+        : profilePayload;
+
     const response = await fetch(`${backendUrl}/account/${id}`, {
         method: "PATCH",
         headers: {
             "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify(payload),
     });
@@ -83,4 +99,11 @@ export async function updateProfile(
         status: "success",
         message: "Profile updated.",
     };
+}
+
+export async function signOut() {
+    const cookieStore = await cookies();
+
+    cookieStore.delete("auth_token");
+    redirect("/login");
 }

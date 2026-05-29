@@ -4,6 +4,9 @@ import { UpdateAccountDto } from './dto/update-account.dto';
 import { DbService } from 'src/db/db.service';
 import { account, doctor, patient } from 'src/db/schema';
 import { eq } from 'drizzle-orm';
+import bcrypt from 'bcrypt';
+
+const SALT_ROUNDS = 12;
 
 @Injectable()
 export class AccountService {
@@ -14,7 +17,15 @@ export class AccountService {
     }
 
     async create(createAccountDto: CreateAccountDto) {
-        return await this.db.connection.insert(account).values(createAccountDto).returning();
+        const [newAccount] = await this.db.connection
+            .insert(account)
+            .values({
+                ...createAccountDto,
+                password: await this.hashPassword(createAccountDto.password),
+            })
+            .returning();
+
+        return this.withoutPassword(newAccount);
     }
 
     async register(dto: CreateAccountDto) {
@@ -32,7 +43,7 @@ export class AccountService {
             .insert(account)
             .values({
                 email: dto.email,
-                password: dto.password,
+                password: await this.hashPassword(dto.password),
                 firstName: dto.firstName,
                 lastName: dto.lastName,
             })
@@ -64,7 +75,7 @@ export class AccountService {
 
         }
 
-        return newAccount
+        return this.withoutPassword(newAccount)
     }
 
     findAll() {
@@ -128,13 +139,18 @@ export class AccountService {
             }
         }
 
+        const { password, ...accountFields } = {
+            email: dto.email,
+            firstName: dto.firstName,
+            lastName: dto.lastName,
+            password: dto.password,
+        };
+
         await this.db.connection
             .update(account)
             .set({
-                email: dto.email,
-                firstName: dto.firstName,
-                lastName: dto.lastName,
-                password: dto.password,
+                ...accountFields,
+                ...(password ? { password: await this.hashPassword(password) } : {}),
             })
             .where(eq(account.id, id));
 
@@ -168,5 +184,14 @@ export class AccountService {
 
     remove(id: number) {
         return `This action removes a #${id} account`;
+    }
+
+    private async hashPassword(password: string) {
+        return bcrypt.hash(password, SALT_ROUNDS);
+    }
+
+    private withoutPassword(user: typeof account.$inferSelect) {
+        const { password, ...safeUser } = user;
+        return safeUser;
     }
 }

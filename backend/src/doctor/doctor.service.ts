@@ -6,14 +6,18 @@ import {
 import { CreateDoctorDto } from './dto/create-doctor.dto';
 import { UpdateDoctorDto } from './dto/update-doctor.dto';
 import { UpdateAppointmentBlocksDto } from './dto/update-appointment-blocks.dto';
-import { account, appointmentBlock, doctor } from 'src/db/schema';
+import { account, appointment, appointmentBlock, doctor } from 'src/db/schema';
 import { DbService } from 'src/db/db.service';
 import { SQL, and, asc, eq, ilike, or } from 'drizzle-orm';
 import { GetDoctorDto } from './dto/get-doctor.dto';
+import { NotificationsService } from 'src/notifications/notifications.service';
 
 @Injectable()
 export class DoctorService {
-    constructor(private db: DbService) { }
+    constructor(
+        private db: DbService,
+        private notificationsService: NotificationsService,
+    ) { }
 
     async create(dto: CreateDoctorDto) {
         const existing = await this.db.connection
@@ -79,6 +83,19 @@ export class DoctorService {
         return query.where(and(...filters));
     }
 
+    async recommend(symptoms: string) {
+        const recommendedSpecialization = this.recommendSpecialization(symptoms);
+        const doctors = await this.findAll({
+            specialization: recommendedSpecialization,
+        });
+
+        return {
+            specialization: recommendedSpecialization,
+            reason: this.recommendationReason(recommendedSpecialization),
+            doctors,
+        };
+    }
+
     findOne(id: number) {
         return `This action returns a #${id} doctor`;
     }
@@ -103,7 +120,7 @@ export class DoctorService {
 
         const blocks = this.sanitizeAppointmentBlocks(id, dto.appointmentBlocks);
 
-        return this.db.connection.transaction(async (tx) => {
+        const updatedBlocks = await this.db.connection.transaction(async (tx) => {
             await tx
                 .delete(appointmentBlock)
                 .where(eq(appointmentBlock.doctorId, id));
@@ -114,6 +131,29 @@ export class DoctorService {
 
             return tx.insert(appointmentBlock).values(blocks).returning();
         });
+
+        const affectedAppointments = await this.db.connection
+            .select({
+                patientId: appointment.patientId,
+            })
+            .from(appointment)
+            .where(eq(appointment.doctorId, id));
+
+        this.notificationsService.notify(
+            id,
+            'Consultation hours updated',
+            'Your availability was updated.',
+        );
+
+        affectedAppointments.forEach((existingAppointment) => {
+            this.notificationsService.notify(
+                existingAppointment.patientId,
+                'Doctor schedule updated',
+                'A doctor you booked with updated their consultation hours.',
+            );
+        });
+
+        return updatedBlocks;
     }
 
     remove(id: number) {
@@ -160,5 +200,47 @@ export class DoctorService {
                 end: block.end,
             };
         });
+    }
+
+    private recommendSpecialization(symptoms: string) {
+        const text = symptoms.toLowerCase();
+        const rules: Array<{ specialization: string; keywords: string[] }> = [
+            {
+                specialization: 'Cardiology',
+                keywords: ['chest', 'heart', 'palpitation', 'blood pressure', 'hypertension'],
+            },
+            {
+                specialization: 'Dermatology',
+                keywords: ['rash', 'skin', 'acne', 'itch', 'eczema'],
+            },
+            {
+                specialization: 'Pediatrics',
+                keywords: ['child', 'kid', 'baby', 'infant', 'toddler'],
+            },
+            {
+                specialization: 'Orthopedics',
+                keywords: ['bone', 'joint', 'knee', 'back pain', 'sprain', 'fracture'],
+            },
+            {
+                specialization: 'Neurology',
+                keywords: ['headache', 'migraine', 'numb', 'seizure', 'dizzy'],
+            },
+            {
+                specialization: 'Psychiatry',
+                keywords: ['anxiety', 'depression', 'sleep', 'panic', 'stress'],
+            },
+            {
+                specialization: 'ENT',
+                keywords: ['ear', 'nose', 'throat', 'sinus', 'hearing'],
+            },
+        ];
+
+        return rules.find((rule) =>
+            rule.keywords.some((keyword) => text.includes(keyword)),
+        )?.specialization ?? 'General Medicine';
+    }
+
+    private recommendationReason(specialization: string) {
+        return `${specialization} is the closest match based on the symptoms and care concerns provided.`;
     }
 }

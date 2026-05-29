@@ -8,19 +8,28 @@ import {
   Delete,
   Put,
   Query,
+  UseGuards,
+  ForbiddenException,
 } from '@nestjs/common';
 import { DoctorService } from './doctor.service';
 import { CreateDoctorDto } from './dto/create-doctor.dto';
 import { UpdateDoctorDto } from './dto/update-doctor.dto';
 import { UpdateAppointmentBlocksDto } from './dto/update-appointment-blocks.dto';
 import { GetDoctorDto } from './dto/get-doctor.dto';
+import { AuthGuard } from 'src/auth/auth.guard';
+import { CurrentUser, type AuthUser } from 'src/auth/auth-user';
 
 @Controller('doctor')
+@UseGuards(AuthGuard)
 export class DoctorController {
   constructor(private readonly doctorService: DoctorService) {}
 
   @Post()
-  create(@Body() createDoctorDto: CreateDoctorDto) {
+  create(@Body() createDoctorDto: CreateDoctorDto, @CurrentUser() user: AuthUser) {
+    if (user.id !== createDoctorDto.acctId) {
+      throw new ForbiddenException('You can only create your own doctor profile');
+    }
+
     return this.doctorService.create(createDoctorDto);
   }
 
@@ -29,13 +38,23 @@ export class DoctorController {
     return this.doctorService.findAll(getDoctorDto);
   }
 
+  @Get('recommendations')
+  recommend(@Query('symptoms') symptoms = '') {
+    return this.doctorService.recommend(symptoms);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.doctorService.findOne(+id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateDoctorDto: UpdateDoctorDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateDoctorDto: UpdateDoctorDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    this.ensureOwnDoctorProfile(+id, user);
     return this.doctorService.update(+id, updateDoctorDto);
   }
 
@@ -48,7 +67,10 @@ export class DoctorController {
   updateAppointmentBlocks(
     @Param('id') id: string,
     @Body() updateAppointmentBlocksDto: UpdateAppointmentBlocksDto,
+    @CurrentUser() user: AuthUser,
   ) {
+    this.ensureOwnDoctorProfile(+id, user);
+
     return this.doctorService.updateAppointmentBlocks(
       +id,
       updateAppointmentBlocksDto,
@@ -56,7 +78,14 @@ export class DoctorController {
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
+  remove(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    this.ensureOwnDoctorProfile(+id, user);
     return this.doctorService.remove(+id);
+  }
+
+  private ensureOwnDoctorProfile(id: number, user: AuthUser) {
+    if (user.id !== id) {
+      throw new ForbiddenException('You can only manage your own doctor profile');
+    }
   }
 }

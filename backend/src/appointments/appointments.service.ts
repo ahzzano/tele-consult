@@ -1,6 +1,7 @@
 import {
     BadRequestException,
     ConflictException,
+    ForbiddenException,
     Injectable,
     NotFoundException,
 } from '@nestjs/common';
@@ -12,14 +13,22 @@ import { GetAppontmentDto } from './dto/get-appointment.dto';
 import { eq, SQL, and, or } from 'drizzle-orm';
 import { aliasedTable } from 'drizzle-orm/alias';
 import { RescheduleAppointmentDto } from './dto/reschedule-appointment.dto';
+import { NotificationsService } from 'src/notifications/notifications.service';
 
 const APPOINTMENT_DURATION_MINUTES = 90;
 
 @Injectable()
 export class AppointmentsService {
-    constructor(private db: DbService) {}
+    constructor(
+        private db: DbService,
+        private notificationsService: NotificationsService,
+    ) {}
 
-    async create(createAppointmentDto: CreateAppointmentDto) {
+    async create(createAppointmentDto: CreateAppointmentDto, actorId?: number) {
+        if (actorId !== undefined && actorId !== createAppointmentDto.patientId) {
+            throw new ForbiddenException('Patients can only book their own appointments');
+        }
+
         await this.validateBookableAppointment({
             doctorId: createAppointmentDto.doctorId,
             patientId: createAppointmentDto.patientId,
@@ -37,20 +46,50 @@ export class AppointmentsService {
             })
             .returning();
 
+        this.notificationsService.notify(
+            createAppointmentDto.doctorId,
+            'New appointment booked',
+            `A patient booked a consultation for ${this.formatAppointmentTime(createAppointmentDto.timeslot)}.`,
+        );
+        this.notificationsService.notify(
+            createAppointmentDto.patientId,
+            'Appointment confirmed',
+            `Your consultation is booked for ${this.formatAppointmentTime(createAppointmentDto.timeslot)}.`,
+        );
+
         return newAppointment;
     }
 
-    async findAll(getAppointmentDto: GetAppontmentDto) {
+    async findAll(getAppointmentDto: GetAppontmentDto, actorId?: number) {
         const conditions: SQL[] = [];
         const doctorAccount = aliasedTable(account, 'doctorAccount');
         const patientAccount = aliasedTable(account, 'patientAccount');
 
         if(getAppointmentDto.patient)  {
+            if (actorId !== undefined && Number(getAppointmentDto.patient) !== actorId) {
+                throw new ForbiddenException('You can only view your own appointments');
+            }
+
             conditions.push(eq(appointment.patientId, Number(getAppointmentDto.patient)));
         }
 
         if(getAppointmentDto.doctor) {
+            if (actorId !== undefined && Number(getAppointmentDto.doctor) !== actorId) {
+                throw new ForbiddenException('You can only view your own appointments');
+            }
+
             conditions.push(eq(appointment.doctorId, Number(getAppointmentDto.doctor)));
+        }
+
+        if (actorId !== undefined && !getAppointmentDto.patient && !getAppointmentDto.doctor) {
+            const ownAppointmentsFilter = or(
+                eq(appointment.patientId, actorId),
+                eq(appointment.doctorId, actorId),
+            );
+
+            if (ownAppointmentsFilter) {
+                conditions.push(ownAppointmentsFilter);
+            }
         }
 
         const query = this.db.connection
@@ -69,15 +108,19 @@ export class AppointmentsService {
             .innerJoin(doctorAccount, eq(appointment.doctorId, doctorAccount.id))
             .innerJoin(patientAccount, eq(appointment.patientId, patientAccount.id));
 
-        if (conditions.length === 0) {
-            return query;
-        }
+        const rows = conditions.length === 0
+            ? await query
+            : await query.where(and(...conditions));
 
-        return query.where(and(...conditions));
+        return rows.map((row) => ({
+            ...row,
+            sessionUrl: this.sessionUrl(row.appointmentId),
+        }));
     }
 
-    async update(id: number, updateAppointmentDto: UpdateAppointmentDto) {
+    async update(id: number, updateAppointmentDto: UpdateAppointmentDto, actorId?: number) {
         this.validateAppointmentId(id);
+        await this.ensureAppointmentActor(id, actorId);
 
         const values: Partial<typeof appointment.$inferInsert> = {};
 
@@ -107,8 +150,10 @@ export class AppointmentsService {
     async reschedule(
         id: number,
         rescheduleAppointmentDto: RescheduleAppointmentDto,
+        actorId?: number,
     ) {
         this.validateAppointmentId(id);
+        await this.ensureAppointmentActor(id, actorId);
         this.validateTimeslot(rescheduleAppointmentDto.timeslot);
         this.validateDayOfWeek(rescheduleAppointmentDto.dayOfWeek);
 
@@ -117,17 +162,98 @@ export class AppointmentsService {
             day: rescheduleAppointmentDto.dayOfWeek,
         });
 
-        return this.updateAppointment(id, {
+        const updatedAppointment = await this.updateAppointment(id, {
             timeslot: rescheduleAppointmentDto.timeslot,
             day: rescheduleAppointmentDto.dayOfWeek,
         });
+
+        this.notificationsService.notify(
+            updatedAppointment.doctorId,
+            'Appointment rescheduled',
+            `A consultation moved to ${this.formatAppointmentTime(updatedAppointment.timeslot)}.`,
+        );
+        this.notificationsService.notify(
+            updatedAppointment.patientId,
+            'Appointment rescheduled',
+            `Your consultation moved to ${this.formatAppointmentTime(updatedAppointment.timeslot)}.`,
+        );
+
+        return updatedAppointment;
     }
 
-    async remove(id: number) {
-        return await this.db.connection
+    async remove(id: number, actorId?: number) {
+        this.validateAppointmentId(id);
+        await this.ensureAppointmentActor(id, actorId);
+
+        const [deletedAppointment] = await this.db.connection
             .delete(appointment)
             .where(eq(appointment.appointmentId, id))
-            .returning()
+            .returning();
+
+        if (deletedAppointment) {
+            this.notificationsService.notify(
+                deletedAppointment.doctorId,
+                'Appointment cancelled',
+                `A consultation on ${this.formatAppointmentTime(deletedAppointment.timeslot)} was cancelled.`,
+            );
+            this.notificationsService.notify(
+                deletedAppointment.patientId,
+                'Appointment cancelled',
+                `Your consultation on ${this.formatAppointmentTime(deletedAppointment.timeslot)} was cancelled.`,
+            );
+        }
+
+        return deletedAppointment;
+    }
+
+    async findBookedSlots(doctorId: number, actorId?: number) {
+        void actorId;
+        this.validateAccountId(doctorId, 'Doctor id');
+
+        await this.ensureDoctorExists(doctorId);
+
+        return this.db.connection
+            .select({
+                appointmentId: appointment.appointmentId,
+                timeslot: appointment.timeslot,
+                day: appointment.day,
+            })
+            .from(appointment)
+            .where(eq(appointment.doctorId, doctorId));
+    }
+
+    async findUpcomingReminders(actorId: number) {
+        const now = new Date();
+        const reminderWindowEnd = this.addMinutes(now, 24 * 60);
+        const appointments = await this.findAll({}, actorId);
+
+        return appointments
+            .filter((existingAppointment) => {
+                const appointmentDate = new Date(existingAppointment.timeslot);
+
+                return appointmentDate >= now && appointmentDate <= reminderWindowEnd;
+            })
+            .map((existingAppointment) => {
+                const isDoctor = existingAppointment.doctorId === actorId;
+                const otherParty = isDoctor
+                    ? this.fullName(
+                          existingAppointment.patientFirstName,
+                          existingAppointment.patientLastName,
+                          `patient #${existingAppointment.patientId}`,
+                      )
+                    : `Dr. ${this.fullName(
+                          existingAppointment.doctorFirstName,
+                          existingAppointment.doctorLastName,
+                          `doctor #${existingAppointment.doctorId}`,
+                      )}`;
+
+                return {
+                    id: `upcoming-${existingAppointment.appointmentId}`,
+                    title: 'Upcoming appointment',
+                    message: `${otherParty} at ${this.formatAppointmentTime(existingAppointment.timeslot)}.`,
+                    createdAt: now.toISOString(),
+                };
+            });
     }
 
     private async updateAppointment(
@@ -154,6 +280,29 @@ export class AppointmentsService {
     private validateAppointmentId(id: number) {
         if (!Number.isInteger(id) || id <= 0) {
             throw new BadRequestException('Appointment id must be a positive integer');
+        }
+    }
+
+    private async ensureAppointmentActor(id: number, actorId?: number) {
+        if (actorId === undefined) {
+            return;
+        }
+
+        const [existingAppointment] = await this.db.connection
+            .select()
+            .from(appointment)
+            .where(eq(appointment.appointmentId, id))
+            .limit(1);
+
+        if (!existingAppointment) {
+            throw new NotFoundException('Appointment not found');
+        }
+
+        if (
+            existingAppointment.patientId !== actorId &&
+            existingAppointment.doctorId !== actorId
+        ) {
+            throw new ForbiddenException('You can only manage your own appointments');
         }
     }
 
@@ -234,15 +383,7 @@ export class AppointmentsService {
     }
 
     private async ensureDoctorAndPatientExist(doctorId: number, patientId: number) {
-        const [existingDoctor] = await this.db.connection
-            .select()
-            .from(doctor)
-            .where(eq(doctor.acctId, doctorId))
-            .limit(1);
-
-        if (!existingDoctor) {
-            throw new NotFoundException('Doctor not found');
-        }
+        await this.ensureDoctorExists(doctorId);
 
         const [existingPatient] = await this.db.connection
             .select()
@@ -252,6 +393,18 @@ export class AppointmentsService {
 
         if (!existingPatient) {
             throw new NotFoundException('Patient not found');
+        }
+    }
+
+    private async ensureDoctorExists(doctorId: number) {
+        const [existingDoctor] = await this.db.connection
+            .select()
+            .from(doctor)
+            .where(eq(doctor.acctId, doctorId))
+            .limit(1);
+
+        if (!existingDoctor) {
+            throw new NotFoundException('Doctor not found');
         }
     }
 
@@ -363,6 +516,25 @@ export class AppointmentsService {
         );
 
         return target;
+    }
+
+    private sessionUrl(appointmentId: number) {
+        return `https://meet.jit.si/tele-consult-${appointmentId}`;
+    }
+
+    private formatAppointmentTime(timeslot: string) {
+        return new Intl.DateTimeFormat('en', {
+            dateStyle: 'medium',
+            timeStyle: 'short',
+        }).format(new Date(timeslot));
+    }
+
+    private fullName(
+        firstName: string | null,
+        lastName: string | null,
+        fallback: string,
+    ) {
+        return [firstName, lastName].filter(Boolean).join(' ') || fallback;
     }
 
     private validateTimeslot(timeslot: string | undefined) {

@@ -1,7 +1,19 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  ForbiddenException,
+  Get,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { AccountService } from './account.service';
 import { CreateAccountDto } from './dto/create-account.dto';
 import { UpdateAccountDto } from './dto/update-account.dto';
+import { AuthGuard } from 'src/auth/auth.guard';
+import { CurrentUser, type AuthUser } from 'src/auth/auth-user';
 
 @Controller('account')
 export class AccountController {
@@ -12,23 +24,37 @@ export class AccountController {
     return this.accountService.register(createAccountDto);
   }
 
-  @Get()
-  findAll() {
-    return this.accountService.findAll();
-  }
-
   @Get(':email')
-  findOne(@Param('email') email: string) {
+  @UseGuards(AuthGuard)
+  findOne(@Param('email') email: string, @CurrentUser() user: AuthUser) {
+    if (user.email !== email) {
+      throw new ForbiddenException('You can only view your own account');
+    }
+
     return this.accountService.findProfile(email);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateAccountDto: UpdateAccountDto) {
+  @UseGuards(AuthGuard)
+  update(
+    @Param('id') id: string,
+    @Body() updateAccountDto: UpdateAccountDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    if (user.id !== +id) {
+      throw new ForbiddenException('You can only update your own account');
+    }
+
     return this.accountService.update(+id, updateAccountDto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
+  @UseGuards(AuthGuard)
+  remove(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    if (user.id !== +id) {
+      throw new ForbiddenException('You can only delete your own account');
+    }
+
     return this.accountService.remove(+id);
   }
 }
