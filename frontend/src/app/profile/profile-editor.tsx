@@ -353,10 +353,12 @@ function ProfileView({ profile }: { profile: AccountProfile }) {
                 )}
             </div>
 
-            <MedicalRecordsDisplay
-                records={profile.medicalRecords}
-                prescriptions={profile.prescriptions}
-            />
+            {profile.role === "Patient" ? (
+                <MedicalRecordsDisplay
+                    records={profile.medicalRecords}
+                    prescriptions={profile.prescriptions}
+                />
+            ) : null}
         </div>
     );
 }

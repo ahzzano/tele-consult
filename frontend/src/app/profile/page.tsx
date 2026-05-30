@@ -78,40 +78,45 @@ export default async function ProfilePage() {
         redirect("/login");
     }
 
-    const recordsQueryKey = profile.role === "Doctor" ? "doctor" : "patient";
-    const recordsResponse = await fetch(
-        `${backendUrl}/records?${recordsQueryKey}=${profile.id}`,
-        {
-            cache: "no-store",
-            headers: authHeaders,
-        },
-    );
+    let medicalRecords: AccountProfile["medicalRecords"] = [];
+    let prescriptions: AccountProfile["prescriptions"] = [];
 
-    if (!recordsResponse.ok) {
-        throw new Error("Failed to load medical records");
+    if (profile.role === "Patient") {
+        const recordsResponse = await fetch(
+            `${backendUrl}/records?patient=${profile.id}`,
+            {
+                cache: "no-store",
+                headers: authHeaders,
+            },
+        );
+
+        if (!recordsResponse.ok) {
+            throw new Error("Failed to load medical records");
+        }
+
+        const prescriptionsResponse = await fetch(
+            `${backendUrl}/prescriptions?patient=${profile.id}`,
+            {
+                cache: "no-store",
+                headers: authHeaders,
+            },
+        );
+
+        if (!prescriptionsResponse.ok) {
+            throw new Error("Failed to load prescriptions");
+        }
+
+        const recordsBody =
+            (await recordsResponse.json()) as ApiResponse<AccountProfile["medicalRecords"]>;
+        const prescriptionsBody =
+            (await prescriptionsResponse.json()) as ApiResponse<AccountProfile["prescriptions"]>;
+
+        medicalRecords = recordsBody.data.toSorted(
+            (left, right) =>
+                new Date(right.createdAt ?? 0).getTime() - new Date(left.createdAt ?? 0).getTime(),
+        );
+        prescriptions = prescriptionsBody.data;
     }
-
-    const prescriptionsResponse = await fetch(
-        `${backendUrl}/prescriptions?${recordsQueryKey}=${profile.id}`,
-        {
-            cache: "no-store",
-            headers: authHeaders,
-        },
-    );
-
-    if (!prescriptionsResponse.ok) {
-        throw new Error("Failed to load prescriptions");
-    }
-
-    const recordsBody =
-        (await recordsResponse.json()) as ApiResponse<AccountProfile["medicalRecords"]>;
-    const prescriptionsBody =
-        (await prescriptionsResponse.json()) as ApiResponse<AccountProfile["prescriptions"]>;
-
-    const medicalRecords = recordsBody.data.toSorted(
-        (left, right) =>
-            new Date(right.createdAt ?? 0).getTime() - new Date(left.createdAt ?? 0).getTime(),
-    );
 
     return (
         <main className="min-h-screen bg-muted/30">
@@ -119,7 +124,7 @@ export default async function ProfilePage() {
                 profile={{
                     ...profile,
                     medicalRecords,
-                    prescriptions: prescriptionsBody.data,
+                    prescriptions,
                 }}
             />
         </main>
