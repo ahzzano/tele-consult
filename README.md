@@ -67,6 +67,8 @@ Create `backend/.env`:
 
 ```env
 DATABASE_URL=postgresql://myuser:mypassword@localhost:5432/mydb
+JWT_SECRET=replace-with-at-least-32-random-characters
+FRONTEND_ORIGIN=http://localhost:3001
 ```
 
 ### Frontend
@@ -91,6 +93,8 @@ POSTGRES_DB=mydb
 POSTGRES_PORT=5432
 BACKEND_PORT=3001
 FRONTEND_PORT=3000
+JWT_SECRET=replace-with-at-least-32-random-characters
+FRONTEND_ORIGIN=http://localhost:3000
 NEXT_PUBLIC_BACKEND_URL=http://localhost:3001
 ```
 
@@ -246,6 +250,8 @@ Backend environment:
 
 ```env
 DATABASE_URL=<Railway PostgreSQL URL>
+JWT_SECRET=<at least 32 random characters>
+FRONTEND_ORIGIN=https://your-frontend.vercel.app
 ```
 
 Frontend service settings:
@@ -284,6 +290,8 @@ Required backend environment:
 
 ```env
 DATABASE_URL=<hosted Postgres URL>
+JWT_SECRET=<at least 32 random characters>
+FRONTEND_ORIGIN=https://your-frontend.vercel.app
 ```
 
 For Neon or other hosted Postgres providers, keep SSL enabled in the connection string:

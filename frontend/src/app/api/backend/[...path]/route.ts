@@ -1,5 +1,7 @@
 import { cookies } from "next/headers";
 
+import { AUTH_COOKIE_NAME } from "@/lib/auth-cookie";
+
 export const dynamic = "force-dynamic";
 
 const hopByHopHeaders = new Set([
@@ -59,7 +61,7 @@ function buildResponseHeaders(response: Response) {
 
 async function proxy(request: Request, context: { params: Promise<{ path: string[] }> }) {
     const { path } = await context.params;
-    const token = (await cookies()).get("auth_token")?.value;
+    const token = (await cookies()).get(AUTH_COOKIE_NAME)?.value;
     const method = request.method.toUpperCase();
     const hasBody = method !== "GET" && method !== "HEAD";
 

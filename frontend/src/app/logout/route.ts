@@ -1,9 +1,11 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { AUTH_COOKIE_NAME } from "@/lib/auth-cookie";
+
 export async function GET() {
     const cookieStore = await cookies();
 
-    cookieStore.delete("auth_token");
+    cookieStore.delete(AUTH_COOKIE_NAME);
     redirect("/login");
 }

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { DashboardModeSwitcher } from "./dashboard-mode-switcher";
 import type { AppointmentBlock } from "./appointment-schedule";
 import type { Appointment } from "./dashboard-types";
+import { AUTH_COOKIE_NAME } from "@/lib/auth-cookie";
 
 type AuthTokenPayload = {
     email?: string;
@@ -20,21 +21,25 @@ type ApiResponse<T> = {
 };
 
 function decodeJwtPayload(token: string): AuthTokenPayload {
-    const payload = token.split(".")[1];
+    try {
+        const payload = token.split(".")[1];
 
-    if (!payload) {
+        if (!payload) {
+            return {};
+        }
+
+        const normalizedPayload = payload.replace(/-/g, "+").replace(/_/g, "/");
+        const decodedPayload = Buffer.from(normalizedPayload, "base64").toString("utf8");
+
+        return JSON.parse(decodedPayload) as AuthTokenPayload;
+    } catch {
         return {};
     }
-
-    const normalizedPayload = payload.replace(/-/g, "+").replace(/_/g, "/");
-    const decodedPayload = Buffer.from(normalizedPayload, "base64").toString("utf8");
-
-    return JSON.parse(decodedPayload) as AuthTokenPayload;
 }
 
 export default async function DashboardPage() {
     const cookieStore = await cookies();
-    const token = cookieStore.get("auth_token")?.value;
+    const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
 
     if (!token) {
         redirect("/login");

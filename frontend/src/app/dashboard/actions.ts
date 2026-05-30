@@ -5,6 +5,8 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { AUTH_COOKIE_NAME } from "@/lib/auth-cookie";
+
 const appointmentBlockSchema = z.object({
     dayOfWeek: z.number().int().min(0).max(6),
     start: z.string().min(1),
@@ -33,7 +35,7 @@ export async function updateDoctorAppointmentBlocks(
         throw new Error("BACKEND_URL is not configured");
     }
 
-    const token = (await cookies()).get("auth_token")?.value;
+    const token = (await cookies()).get(AUTH_COOKIE_NAME)?.value;
 
     const result = appointmentBlocksSchema.safeParse({
         doctorId,
@@ -76,6 +78,6 @@ export async function updateDoctorAppointmentBlocks(
 export async function signOut() {
     const cookieStore = await cookies();
 
-    cookieStore.delete("auth_token");
+    cookieStore.delete(AUTH_COOKIE_NAME);
     redirect("/login");
 }

@@ -4,6 +4,8 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { AUTH_COOKIE_NAME, authCookieOptions } from "@/lib/auth-cookie";
+
 const requiredText = (fieldName: string) =>
     z.string().trim().min(1, `${fieldName} is required`);
 
@@ -173,12 +175,7 @@ export async function register(
     }
 
     const cookieStore = await cookies();
-    cookieStore.set("auth_token", accessToken, {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
-        path: "/",
-    });
+    cookieStore.set(AUTH_COOKIE_NAME, accessToken, authCookieOptions);
 
     redirect("/dashboard");
 }

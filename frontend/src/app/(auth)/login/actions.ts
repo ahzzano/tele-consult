@@ -4,6 +4,8 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { AUTH_COOKIE_NAME, authCookieOptions } from "@/lib/auth-cookie";
+
 const loginSchema = z.object({
     email: z.email("Enter a valid email address").trim(),
     password: z.string().min(1, "Password is required"),
@@ -90,12 +92,7 @@ export async function login(
     }
 
     const cookieStore = await cookies();
-    cookieStore.set("auth_token", accessToken, {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
-        path: "/",
-    });
+    cookieStore.set(AUTH_COOKIE_NAME, accessToken, authCookieOptions);
 
     redirect("/dashboard");
 }

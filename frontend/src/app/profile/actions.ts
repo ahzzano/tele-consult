@@ -5,6 +5,8 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { AUTH_COOKIE_NAME } from "@/lib/auth-cookie";
+
 export type ProfileActionState = {
     status: "idle" | "success" | "error";
     message?: string;
@@ -55,7 +57,7 @@ export async function updateProfile(
         throw new Error("BACKEND_URL is not configured");
     }
 
-    const token = (await cookies()).get("auth_token")?.value;
+    const token = (await cookies()).get(AUTH_COOKIE_NAME)?.value;
 
     const raw = Object.fromEntries(formData.entries());
     const result = profileSchema.safeParse({
@@ -104,6 +106,6 @@ export async function updateProfile(
 export async function signOut() {
     const cookieStore = await cookies();
 
-    cookieStore.delete("auth_token");
+    cookieStore.delete(AUTH_COOKIE_NAME);
     redirect("/login");
 }
