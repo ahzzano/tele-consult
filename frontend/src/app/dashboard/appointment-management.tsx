@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Dialog } from "@base-ui/react/dialog";
 import axios from "axios";
-import { CalendarClock, ClipboardPlus, Pill, Trash2, Video, X } from "lucide-react";
+import { CalendarClock, ClipboardList, ClipboardPlus, Pill, Trash2, Video, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -31,6 +31,26 @@ import type { Appointment } from "./dashboard-types";
 type ApiResponse<T> = {
     success: boolean;
     data: T;
+};
+
+type MedicalRecord = {
+    id: number;
+    appointmentId?: number | null;
+    patient: number;
+    doctor: number;
+    diagnosis?: string | null;
+    summary?: string | null;
+    followUpInstructions?: string | null;
+    createdAt?: string | null;
+};
+
+type Prescription = {
+    id: number;
+    patient: number;
+    doctor: number;
+    record: number;
+    medicine: string;
+    dosage: number;
 };
 
 const backendUrl = "/api/backend";
@@ -64,6 +84,22 @@ export function getPatientName(appointment: Appointment) {
         .join(" ");
 
     return name || `patient #${appointment.patientId}`;
+}
+
+function displayValue(value: string | number | null | undefined) {
+    return value ? String(value) : "Not provided";
+}
+
+function formatRecordDate(value: string | null | undefined) {
+    if (!value) {
+        return "Date unavailable";
+    }
+
+    return new Intl.DateTimeFormat("en", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+    }).format(new Date(value));
 }
 
 export function PatientAppointments({
@@ -142,6 +178,7 @@ export function DoctorAppointments({
 
                                 <div className="flex flex-wrap gap-2">
                                     <JoinConsultationButton appointment={appointment} />
+                                    <PatientRecordsDialog appointment={appointment} />
                                     <ConsultationNotesDialog appointment={appointment} />
                                 </div>
                             </div>
@@ -171,6 +208,222 @@ function JoinConsultationButton({ appointment }: { appointment: Appointment }) {
             <Video className="size-4" />
             Join
         </a>
+    );
+}
+
+function PatientRecordsDialog({ appointment }: { appointment: Appointment }) {
+    const [isOpen, setIsOpen] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [statusMessage, setStatusMessage] = useState<string | null>(null);
+    const [records, setRecords] = useState<MedicalRecord[]>([]);
+    const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
+    const [selectedRecordId, setSelectedRecordId] = useState<number | null>(null);
+
+    useEffect(() => {
+        if (!isOpen) {
+            return;
+        }
+
+        let isCurrent = true;
+
+        async function loadPatientRecords() {
+            try {
+                setIsLoading(true);
+                setStatusMessage(null);
+
+                const params = {
+                    doctor: appointment.doctorId,
+                    patient: appointment.patientId,
+                };
+
+                const [recordsResponse, prescriptionsResponse] = await Promise.all([
+                    axios.get<ApiResponse<MedicalRecord[]>>(`${backendUrl}/records`, { params }),
+                    axios.get<ApiResponse<Prescription[]>>(`${backendUrl}/prescriptions`, { params }),
+                ]);
+
+                if (!isCurrent) {
+                    return;
+                }
+
+                const nextRecords = recordsResponse.data.data.toSorted(
+                    (left, right) =>
+                        new Date(right.createdAt ?? 0).getTime() -
+                        new Date(left.createdAt ?? 0).getTime(),
+                );
+
+                setRecords(nextRecords);
+                setPrescriptions(prescriptionsResponse.data.data);
+                setSelectedRecordId(nextRecords[0]?.id ?? null);
+            } catch {
+                if (isCurrent) {
+                    setStatusMessage("Unable to load this patient's medical records.");
+                    setRecords([]);
+                    setPrescriptions([]);
+                    setSelectedRecordId(null);
+                }
+            } finally {
+                if (isCurrent) {
+                    setIsLoading(false);
+                }
+            }
+        }
+
+        loadPatientRecords();
+
+        return () => {
+            isCurrent = false;
+        };
+    }, [appointment.doctorId, appointment.patientId, isOpen]);
+
+    const selectedRecord = useMemo(
+        () => records.find((record) => record.id === selectedRecordId) ?? records[0] ?? null,
+        [records, selectedRecordId],
+    );
+
+    const selectedPrescriptions = useMemo(
+        () =>
+            selectedRecord
+                ? prescriptions.filter((prescription) => prescription.record === selectedRecord.id)
+                : [],
+        [prescriptions, selectedRecord],
+    );
+
+    return (
+        <Dialog.Root open={isOpen} onOpenChange={setIsOpen}>
+            <Dialog.Trigger className={buttonVariants({ variant: "outline", size: "sm" })}>
+                <ClipboardList className="size-4" />
+                Records
+            </Dialog.Trigger>
+
+            <Dialog.Portal>
+                <Dialog.Backdrop className="fixed inset-0 z-50 bg-black/40" />
+                <Dialog.Popup className="fixed left-1/2 top-1/2 z-50 grid max-h-[calc(100vh-2rem)] w-[min(800px,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-lg border bg-background p-5 shadow-xl">
+                    <div className="flex items-start justify-between gap-4">
+                        <div>
+                            <Dialog.Title className="text-lg font-semibold">
+                                Patient medical records
+                            </Dialog.Title>
+                            <Dialog.Description className="mt-1 text-sm text-muted-foreground">
+                                {getPatientName(appointment)}
+                            </Dialog.Description>
+                        </div>
+                        <Dialog.Close className={buttonVariants({ variant: "ghost", size: "icon" })}>
+                            <span className="sr-only">Close patient records dialog</span>
+                            <X className="size-4" />
+                        </Dialog.Close>
+                    </div>
+
+                    {isLoading ? (
+                        <div className="rounded-lg border border-dashed bg-muted/30 p-6 text-sm text-muted-foreground">
+                            Loading medical records...
+                        </div>
+                    ) : statusMessage ? (
+                        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-6 text-sm text-destructive">
+                            {statusMessage}
+                        </div>
+                    ) : records.length === 0 ? (
+                        <div className="rounded-lg border border-dashed bg-muted/30 p-6 text-sm text-muted-foreground">
+                            No medical records found for this patient.
+                        </div>
+                    ) : (
+                        <div className="grid min-h-[26rem] gap-4 lg:grid-cols-[minmax(12rem,0.8fr)_minmax(0,1.4fr)]">
+                            <div className="rounded-lg border bg-background">
+                                <div className="border-b px-3 py-2 text-xs font-medium uppercase text-muted-foreground">
+                                    Records
+                                </div>
+                                <div className="max-h-[28rem] overflow-y-auto p-2">
+                                    {records.map((record) => {
+                                        const isSelected = record.id === selectedRecord?.id;
+
+                                        return (
+                                            <button
+                                                className={`flex w-full flex-col gap-1 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                                                    isSelected
+                                                        ? "bg-primary text-primary-foreground"
+                                                        : "hover:bg-muted"
+                                                }`}
+                                                key={record.id}
+                                                onClick={() => setSelectedRecordId(record.id)}
+                                                type="button"
+                                            >
+                                                <span className="flex items-center gap-2 font-medium">
+                                                    <ClipboardList className="size-4 shrink-0" />
+                                                    <span className="truncate">
+                                                        {displayValue(record.diagnosis)}
+                                                    </span>
+                                                </span>
+                                                <span
+                                                    className={`text-xs ${
+                                                        isSelected
+                                                            ? "text-primary-foreground/75"
+                                                            : "text-muted-foreground"
+                                                    }`}
+                                                >
+                                                    {formatRecordDate(record.createdAt)}
+                                                </span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            <div className="grid gap-4">
+                                <section className="rounded-lg border bg-background p-4">
+                                    <h2 className="font-medium">
+                                        {displayValue(selectedRecord?.diagnosis)}
+                                    </h2>
+                                    <p className="text-xs text-muted-foreground">
+                                        {formatRecordDate(selectedRecord?.createdAt)}
+                                    </p>
+                                    <div className="mt-4 grid gap-4 text-sm md:grid-cols-2">
+                                        <div>
+                                            <p className="font-medium">Summary</p>
+                                            <p className="mt-1 text-muted-foreground">
+                                                {displayValue(selectedRecord?.summary)}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className="font-medium">Follow-up Instructions</p>
+                                            <p className="mt-1 text-muted-foreground">
+                                                {displayValue(selectedRecord?.followUpInstructions)}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                <section className="rounded-lg border bg-background p-4">
+                                    <div className="flex items-center gap-2">
+                                        <Pill className="size-4 text-muted-foreground" />
+                                        <h2 className="font-medium">Prescription Drugs</h2>
+                                    </div>
+                                    {selectedPrescriptions.length === 0 ? (
+                                        <p className="mt-4 text-sm text-muted-foreground">
+                                            No prescriptions attached to this record.
+                                        </p>
+                                    ) : (
+                                        <div className="mt-4 grid gap-2">
+                                            {selectedPrescriptions.map((prescription) => (
+                                                <div
+                                                    className="grid gap-1 rounded-lg border px-3 py-2 text-sm sm:grid-cols-[1fr_auto] sm:items-center"
+                                                    key={prescription.id}
+                                                >
+                                                    <span className="font-medium">
+                                                        {prescription.medicine}
+                                                    </span>
+                                                    <span className="text-muted-foreground">
+                                                        Dosage: {prescription.dosage}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </section>
+                            </div>
+                        </div>
+                    )}
+                </Dialog.Popup>
+            </Dialog.Portal>
+        </Dialog.Root>
     );
 }
 

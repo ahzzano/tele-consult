@@ -73,7 +73,11 @@ export class RecordsService {
         }
 
         if(query.patient) {
-            if (actorId !== undefined && Number(query.patient) !== actorId) {
+            const isPatientOwner = Number(query.patient) === actorId;
+            const isDoctorScopedQuery =
+                query.doctor !== undefined && Number(query.doctor) === actorId;
+
+            if (actorId !== undefined && !isPatientOwner && !isDoctorScopedQuery) {
                 throw new ForbiddenException('You can only view your own records');
             }
 

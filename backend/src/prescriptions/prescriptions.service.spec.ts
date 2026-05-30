@@ -73,6 +73,35 @@ describe('PrescriptionsService', () => {
     );
   });
 
+  it('should allow a doctor-scoped patient prescriptions query', async () => {
+    const prescriptions = [
+      {
+        id: 4,
+        patient: 1,
+        doctor: 2,
+        record: 3,
+        medicine: 'Amoxicillin',
+        dosage: 500,
+      },
+    ];
+    const where = jest.fn().mockResolvedValue(prescriptions);
+
+    dbService.connection.select.mockReturnValue({
+      from: jest.fn().mockReturnValue({ where }),
+    });
+
+    await expect(
+      service.findAll({ doctor: 2, patient: 1 }, 2),
+    ).resolves.toEqual(prescriptions);
+    expect(where).toHaveBeenCalled();
+  });
+
+  it('should reject patient prescriptions queries that are not scoped to the actor', async () => {
+    await expect(service.findAll({ patient: 1 }, 2)).rejects.toThrow(
+      'You can only view your own prescriptions',
+    );
+  });
+
   it('should update a prescription when references remain valid', async () => {
     const existingPrescription = {
       id: 4,
