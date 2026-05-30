@@ -280,26 +280,26 @@ function ConsultationNotesDialog({ appointment }: { appointment: Appointment }) 
                             />
                         </label>
 
-                        <div className="grid gap-3 rounded-lg border bg-muted/20 p-3 sm:grid-cols-[1fr_140px]">
-                            <label className="grid gap-1 text-sm">
+                        <div className="grid gap-3 rounded-lg border bg-muted/20 p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,140px)]">
+                            <label className="grid min-w-0 gap-1 text-sm">
                                 <span className="flex items-center gap-2 font-medium">
                                     <Pill className="size-4 text-muted-foreground" />
                                     Medicine
                                 </span>
                                 <input
                                     name="medicine"
-                                    className="h-9 rounded-lg border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-3 focus:ring-ring/20"
+                                    className="h-9 w-full min-w-0 rounded-lg border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-3 focus:ring-ring/20"
                                     placeholder="Optional"
                                 />
                             </label>
-                            <label className="grid gap-1 text-sm">
+                            <label className="grid min-w-0 gap-1 text-sm">
                                 <span className="font-medium">Dosage</span>
                                 <input
                                     name="dosage"
                                     type="number"
                                     min="0"
                                     step="0.1"
-                                    className="h-9 rounded-lg border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-3 focus:ring-ring/20"
+                                    className="h-9 w-full min-w-0 rounded-lg border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-3 focus:ring-ring/20"
                                     placeholder="Optional"
                                 />
                             </label>
