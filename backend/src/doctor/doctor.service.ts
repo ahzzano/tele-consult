@@ -6,11 +6,11 @@ import {
 import { CreateDoctorDto } from './dto/create-doctor.dto';
 import { UpdateDoctorDto } from './dto/update-doctor.dto';
 import { UpdateAppointmentBlocksDto } from './dto/update-appointment-blocks.dto';
-import { account, appointment, appointmentBlock, doctor } from 'src/db/schema';
-import { DbService } from 'src/db/db.service';
+import { account, appointment, appointmentBlock, doctor } from '../db/schema';
+import { DbService } from '../db/db.service';
 import { SQL, and, asc, eq, ilike, or } from 'drizzle-orm';
 import { GetDoctorDto } from './dto/get-doctor.dto';
-import { NotificationsService } from 'src/notifications/notifications.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class DoctorService {

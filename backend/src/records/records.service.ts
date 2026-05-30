@@ -6,10 +6,10 @@ import {
 } from '@nestjs/common';
 import { CreateRecordDto } from './dto/create-record.dto';
 import { UpdateRecordDto } from './dto/update-record.dto';
-import { DbService } from 'src/db/db.service';
-import { appointment, doctor, medicalRecord, patient } from 'src/db/schema';
+import { DbService } from '../db/db.service';
+import { appointment, doctor, medicalRecord, patient } from '../db/schema';
 import { eq, SQL, and } from 'drizzle-orm';
-import { NotificationsService } from 'src/notifications/notifications.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class RecordsService {

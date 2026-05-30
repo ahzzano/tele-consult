@@ -7,13 +7,13 @@ import {
 } from '@nestjs/common';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { UpdateAppointmentDto } from './dto/update-appointment.dto';
-import { DbService } from 'src/db/db.service';
-import { account, appointment, appointmentBlock, doctor, patient } from 'src/db/schema';
+import { DbService } from '../db/db.service';
+import { account, appointment, appointmentBlock, doctor, patient } from '../db/schema';
 import { GetAppontmentDto } from './dto/get-appointment.dto';
 import { eq, SQL, and, or } from 'drizzle-orm';
 import { aliasedTable } from 'drizzle-orm/alias';
 import { RescheduleAppointmentDto } from './dto/reschedule-appointment.dto';
-import { NotificationsService } from 'src/notifications/notifications.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 const APPOINTMENT_DURATION_MINUTES = 60;
 

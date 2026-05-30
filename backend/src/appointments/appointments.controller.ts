@@ -4,8 +4,8 @@ import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { UpdateAppointmentDto } from './dto/update-appointment.dto';
 import { GetAppontmentDto } from './dto/get-appointment.dto';
 import { RescheduleAppointmentDto } from './dto/reschedule-appointment.dto';
-import { AuthGuard } from 'src/auth/auth.guard';
-import { CurrentUser, type AuthUser } from 'src/auth/auth-user';
+import { AuthGuard } from '../auth/auth.guard';
+import { CurrentUser, type AuthUser } from '../auth/auth-user';
 
 @Controller('appointments')
 @UseGuards(AuthGuard)

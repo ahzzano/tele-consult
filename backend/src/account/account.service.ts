@@ -1,8 +1,8 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { AccountRole, type CreateAccountDto } from './dto/create-account.dto';
 import { UpdateAccountDto } from './dto/update-account.dto';
-import { DbService } from 'src/db/db.service';
-import { account, doctor, patient } from 'src/db/schema';
+import { DbService } from '../db/db.service';
+import { account, doctor, patient } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import bcrypt from 'bcrypt';
 

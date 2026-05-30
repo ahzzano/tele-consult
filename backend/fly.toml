@@ -1,7 +1,7 @@
 # Rename this app before your first deploy, for example:
-# fly apps create teleconsult-api-yourname
+# fly apps create tele-consult
 # Then update the app value below.
-app = "teleconsult-api"
+app = "tele-consult"
 primary_region = "sin"
 
 [env]

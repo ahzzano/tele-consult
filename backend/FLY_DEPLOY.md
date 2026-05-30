@@ -8,7 +8,7 @@ From the repository root:
 
 ```bash
 cd backend
-fly apps create teleconsult-api-yourname
+fly apps create tele-consult
 ```
 
 Update `app` in `fly.toml` to match the app name you created.
@@ -28,7 +28,7 @@ Railway Free/Trial Postgres
 Neon is usually the cleanest fit if you only need Postgres. Create a Neon project, copy the pooled or direct connection string, then set it on Fly:
 
 ```bash
-fly secrets set DATABASE_URL="postgresql://USER:PASSWORD@HOST/DB?sslmode=require" --app teleconsult-api-yourname
+fly secrets set DATABASE_URL="postgresql://USER:PASSWORD@HOST/DB?sslmode=require" --app tele-consult
 ```
 
 Then skip the Fly Postgres create/attach commands and go straight to deploy.
@@ -44,7 +44,7 @@ fly postgres create --name teleconsult-db --region sin
 Attach it to the backend app:
 
 ```bash
-fly postgres attach teleconsult-db --app teleconsult-api-yourname
+fly postgres attach teleconsult-db --app tele-consult
 ```
 
 Fly will set `DATABASE_URL` as an app secret. The backend reads that variable at runtime.
@@ -90,7 +90,7 @@ memory = "512mb"
 After the first successful deploy:
 
 ```bash
-fly ssh console --app teleconsult-api-yourname
+fly ssh console --app tele-consult
 pnpm db:seed
 exit
 ```
@@ -111,7 +111,7 @@ Patient: leo.reyes@example.com
 ## 5. Test
 
 ```bash
-curl https://teleconsult-api-yourname.fly.dev
+curl https://tele-consult.fly.dev
 ```
 
 Expected response:
@@ -123,6 +123,6 @@ Expected response:
 Use the backend URL as the frontend's backend environment value:
 
 ```env
-BACKEND_URL=https://teleconsult-api-yourname.fly.dev
-NEXT_PUBLIC_BACKEND_URL=https://teleconsult-api-yourname.fly.dev
+BACKEND_URL=https://tele-consult.fly.dev
+NEXT_PUBLIC_BACKEND_URL=https://tele-consult.fly.dev
 ```

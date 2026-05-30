@@ -16,8 +16,8 @@ import { CreateDoctorDto } from './dto/create-doctor.dto';
 import { UpdateDoctorDto } from './dto/update-doctor.dto';
 import { UpdateAppointmentBlocksDto } from './dto/update-appointment-blocks.dto';
 import { GetDoctorDto } from './dto/get-doctor.dto';
-import { AuthGuard } from 'src/auth/auth.guard';
-import { CurrentUser, type AuthUser } from 'src/auth/auth-user';
+import { AuthGuard } from '../auth/auth.guard';
+import { CurrentUser, type AuthUser } from '../auth/auth-user';
 
 @Controller('doctor')
 @UseGuards(AuthGuard)

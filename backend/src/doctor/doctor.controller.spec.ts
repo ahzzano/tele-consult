@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DoctorController } from './doctor.controller';
 import { DoctorService } from './doctor.service';
-import { AuthGuard } from 'src/auth/auth.guard';
+import { AuthGuard } from '../auth/auth.guard';
 
 describe('DoctorController', () => {
   let controller: DoctorController;

@@ -2,8 +2,8 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } f
 import { RecordsService } from './records.service';
 import { CreateRecordDto } from './dto/create-record.dto';
 import { UpdateRecordDto } from './dto/update-record.dto';
-import { AuthGuard } from 'src/auth/auth.guard';
-import { CurrentUser, type AuthUser } from 'src/auth/auth-user';
+import { AuthGuard } from '../auth/auth.guard';
+import { CurrentUser, type AuthUser } from '../auth/auth-user';
 
 @Controller('records')
 @UseGuards(AuthGuard)

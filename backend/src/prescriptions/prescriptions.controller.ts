@@ -2,8 +2,8 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } f
 import { PrescriptionsService } from './prescriptions.service';
 import { CreatePrescriptionDto } from './dto/create-prescription.dto';
 import { UpdatePrescriptionDto } from './dto/update-prescription.dto';
-import { AuthGuard } from 'src/auth/auth.guard';
-import { CurrentUser, type AuthUser } from 'src/auth/auth-user';
+import { AuthGuard } from '../auth/auth.guard';
+import { CurrentUser, type AuthUser } from '../auth/auth-user';
 
 @Controller('prescriptions')
 @UseGuards(AuthGuard)

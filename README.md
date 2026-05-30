@@ -268,6 +268,40 @@ After deploying the backend, seed demo data from the Railway shell or command ru
 pnpm db:seed
 ```
 
+### Vercel Backend Notes
+
+The backend can also be deployed as a separate Vercel project from the monorepo:
+
+```text
+Root directory: backend
+Framework preset: Other / NestJS
+Install command: pnpm install --frozen-lockfile
+Build command: pnpm build
+Output directory: leave blank
+```
+
+Required backend environment:
+
+```env
+DATABASE_URL=<hosted Postgres URL>
+```
+
+For Neon or other hosted Postgres providers, keep SSL enabled in the connection string:
+
+```env
+DATABASE_URL=postgresql://user:password@host/database?sslmode=require
+```
+
+Run schema sync and seed data against the hosted database before or after deployment:
+
+```bash
+cd backend
+DATABASE_URL="<hosted Postgres URL>" pnpm db:push
+DATABASE_URL="<hosted Postgres URL>" pnpm db:seed
+```
+
+If Vercel shows `FUNCTION_INVOCATION_FAILED`, open the backend project in Vercel and check **Runtime Logs**. The generic crash page does not include the real error. The most common cause is a missing or invalid `DATABASE_URL`.
+
 ## Verification
 
 Backend:

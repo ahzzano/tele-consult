@@ -1,7 +1,7 @@
 import { Controller, Get, MessageEvent, Sse, UseGuards } from '@nestjs/common';
 import { map, Observable } from 'rxjs';
-import { CurrentUser, type AuthUser } from 'src/auth/auth-user';
-import { AuthGuard } from 'src/auth/auth.guard';
+import { CurrentUser, type AuthUser } from '../auth/auth-user';
+import { AuthGuard } from '../auth/auth.guard';
 import { NotificationsService } from './notifications.service';
 
 @Controller('notifications')

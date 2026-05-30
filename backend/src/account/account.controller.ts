@@ -12,8 +12,8 @@ import {
 import { AccountService } from './account.service';
 import { CreateAccountDto } from './dto/create-account.dto';
 import { UpdateAccountDto } from './dto/update-account.dto';
-import { AuthGuard } from 'src/auth/auth.guard';
-import { CurrentUser, type AuthUser } from 'src/auth/auth-user';
+import { AuthGuard } from '../auth/auth.guard';
+import { CurrentUser, type AuthUser } from '../auth/auth-user';
 
 @Controller('account')
 export class AccountController {

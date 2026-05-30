@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AccountService } from './account.service';
-import { DbService } from 'src/db/db.service';
+import { DbService } from '../db/db.service';
 
 describe('AccountService', () => {
   let service: AccountService;

@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RecordsService } from './records.service';
-import { DbService } from 'src/db/db.service';
-import { NotificationsService } from 'src/notifications/notifications.service';
+import { DbService } from '../db/db.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 describe('RecordsService', () => {
   let service: RecordsService;

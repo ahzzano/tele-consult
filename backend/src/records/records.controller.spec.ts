@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RecordsController } from './records.controller';
 import { RecordsService } from './records.service';
-import { AuthGuard } from 'src/auth/auth.guard';
+import { AuthGuard } from '../auth/auth.guard';
 
 describe('RecordsController', () => {
   let controller: RecordsController;
