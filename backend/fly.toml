@@ -1,0 +1,24 @@
+# Rename this app before your first deploy, for example:
+# fly apps create teleconsult-api-yourname
+# Then update the app value below.
+app = "teleconsult-api"
+primary_region = "sin"
+
+[env]
+  PORT = "3001"
+
+[deploy]
+  release_command = "pnpm db:push"
+  release_command_timeout = "5m"
+
+[http_service]
+  internal_port = 3001
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[vm]]
+  memory = "1gb"
+  cpu_kind = "shared"
+  cpus = 1

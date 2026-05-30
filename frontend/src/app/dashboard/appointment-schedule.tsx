@@ -34,11 +34,11 @@ export const days = [
 ];
 
 export const startHour = 7;
-export const endHour = 22;
+export const endHour = 23;
 export const slotMinutes = 30;
 const slotsPerHour = 60 / slotMinutes;
 const slotCount = (endHour - startHour) * slotsPerHour;
-const appointmentSlotLength = 3;
+const appointmentSlotLength = 2;
 
 export function formatDateInput(date: Date) {
     const year = date.getFullYear();
@@ -120,7 +120,13 @@ export function getAppointmentTimestamp(
     date.setDate(date.getDate() + dayOfWeek);
     date.setHours(Math.floor(totalMinutes / 60), totalMinutes % 60, 0, 0);
 
-    return date.toISOString();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+
+    return `${year}-${month}-${day} ${hours}:${minutes}:00`;
 }
 
 export function getWeekdayDate(dateValue: string, dayOfWeek: number) {
@@ -143,9 +149,19 @@ export function getSlotFromTimestamp(timestamp: string): ScheduleSlot | null {
     };
 }
 
-function bookedSlotIndexesForDay(bookedSlots: BookedSlot[], dayOfWeek: number) {
+function bookedSlotIndexesForDay(
+    bookedSlots: BookedSlot[],
+    date: string,
+    dayOfWeek: number,
+) {
+    const weekdayDate = getWeekdayDate(date, dayOfWeek);
+
     return bookedSlots
-        .filter((slot) => slot.day === dayOfWeek)
+        .filter(
+            (slot) =>
+                slot.day === dayOfWeek &&
+                formatDateInput(new Date(slot.timeslot)) === weekdayDate,
+        )
         .map((slot) => getSlotIndexFromTimestamp(slot.timeslot))
         .filter((slot): slot is number => slot !== null);
 }
@@ -153,6 +169,7 @@ function bookedSlotIndexesForDay(bookedSlots: BookedSlot[], dayOfWeek: number) {
 function isSlotBookable(
     availability: boolean[][],
     bookedSlots: BookedSlot[],
+    date: string,
     dayOfWeek: number,
     slotIndex: number,
 ) {
@@ -164,7 +181,7 @@ function isSlotBookable(
         return false;
     }
 
-    return !bookedSlotIndexesForDay(bookedSlots, dayOfWeek).some((bookedSlotIndex) => {
+    return !bookedSlotIndexesForDay(bookedSlots, date, dayOfWeek).some((bookedSlotIndex) => {
         const requestedEnd = slotIndex + appointmentSlotLength;
         const bookedEnd = bookedSlotIndex + appointmentSlotLength;
 
@@ -188,6 +205,11 @@ export function ScheduleSlotPicker({
     onSelectSlot: (slot: ScheduleSlot) => void;
 }) {
     const availability = createAvailabilityFromBlocks(appointmentBlocks);
+    const bookableSlots = availability.map((dayAvailability, dayOfWeek) =>
+        dayAvailability.map((_, slotIndex) =>
+            isSlotBookable(availability, bookedSlots, date, dayOfWeek, slotIndex),
+        ),
+    );
 
     return (
         <div className="min-h-0 flex-1 overflow-auto rounded-lg border bg-background">
@@ -233,18 +255,7 @@ export function ScheduleSlotPicker({
                                 </div>
 
                                 {days.map((day, dayOfWeek) => {
-                                    const isAvailable = isSlotBookable(
-                                        availability,
-                                        bookedSlots,
-                                        dayOfWeek,
-                                        slotIndex,
-                                    );
-                                    const aboveAvailable =
-                                        slotIndex > 0 &&
-                                        availability[dayOfWeek][slotIndex - 1];
-                                    const belowAvailable =
-                                        slotIndex < slotCount - 1 &&
-                                        availability[dayOfWeek][slotIndex + 1];
+                                    const isAvailable = bookableSlots[dayOfWeek][slotIndex];
                                     const isSelected =
                                         selectedSlot?.dayOfWeek === dayOfWeek &&
                                         selectedSlot.slotIndex === slotIndex;
@@ -256,21 +267,23 @@ export function ScheduleSlotPicker({
                                             disabled={!isAvailable || disabled}
                                             onClick={() => onSelectSlot({ dayOfWeek, slotIndex })}
                                             aria-label={`${day.label} ${formatTime(slotIndex)}`}
-                                            className="relative h-8 border-l border-t bg-background transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:bg-muted/30 disabled:hover:bg-muted/30 focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-ring"
+                                            className={cn(
+                                                "relative h-8 border-l border-t bg-background transition-colors disabled:cursor-not-allowed disabled:bg-muted/30 disabled:hover:bg-muted/30 focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-ring",
+                                                isAvailable && "hover:bg-emerald-50",
+                                            )}
                                         >
                                             {isAvailable ? (
                                                 <span
                                                     className={cn(
-                                                        "pointer-events-none absolute inset-x-1 inset-y-0 border-x border-emerald-600 bg-emerald-500/20",
-                                                        !aboveAvailable &&
-                                                        "top-1 rounded-t-md border-t",
-                                                        !belowAvailable &&
-                                                        "bottom-1 rounded-b-md border-b",
+                                                        "pointer-events-none absolute inset-x-1 inset-y-1 flex items-center justify-center rounded-md border border-emerald-600 bg-emerald-500/20 text-[11px] font-medium text-emerald-800",
+                                                        isSelected && "bg-emerald-500/30 text-emerald-900",
                                                     )}
-                                                />
+                                                >
+                                                    {formatTime(slotIndex)}
+                                                </span>
                                             ) : null}
                                             {isSelected ? (
-                                                <CheckCircle2 className="absolute left-1/2 top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 text-emerald-700" />
+                                                <CheckCircle2 className="absolute right-1.5 top-1/2 size-3.5 -translate-y-1/2 text-emerald-800" />
                                             ) : null}
                                         </button>
                                     );

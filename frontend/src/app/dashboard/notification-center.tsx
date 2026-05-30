@@ -19,10 +19,6 @@ type NotificationEvent = {
     createdAt: string;
 };
 
-type NotificationPayload =
-    | NotificationEvent
-    | { success: boolean; data: NotificationEvent | { data: NotificationEvent } };
-
 type ApiResponse<T> = {
     success: boolean;
     data: T;
@@ -30,27 +26,16 @@ type ApiResponse<T> = {
 
 const backendUrl = "/api/backend";
 
-function normalizeNotification(payload: NotificationPayload) {
-    if ("success" in payload) {
-        return "data" in payload.data ? payload.data.data : payload.data;
-    }
-
-    return payload;
-}
-
 export function NotificationCenter() {
     const [notifications, setNotifications] = useState<NotificationEvent[]>([]);
-    const [browserPermission, setBrowserPermission] = useState<NotificationPermission | "unsupported">(
-        "unsupported",
-    );
+    const [browserPermission, setBrowserPermission] = useState<
+        NotificationPermission | "unsupported"
+    >(() => (typeof Notification === "undefined" ? "unsupported" : Notification.permission));
 
     useEffect(() => {
-        setBrowserPermission(
-            typeof Notification === "undefined" ? "unsupported" : Notification.permission,
-        );
-    }, []);
+        let isMounted = true;
+        let knownNotificationIds = new Set<string>();
 
-    useEffect(() => {
         async function loadNotifications() {
             try {
                 const [recentResponse, remindersResponse] = await Promise.all([
@@ -65,32 +50,47 @@ export function NotificationCenter() {
                     ? ((await remindersResponse.json()) as ApiResponse<NotificationEvent[]>)
                     : { data: [] };
 
-                setNotifications(
-                    [...remindersBody.data, ...recentBody.data].slice(0, 8),
+                const nextNotifications = [...remindersBody.data, ...recentBody.data].slice(0, 8);
+
+                if (!isMounted) {
+                    return;
+                }
+
+                const newNotifications = nextNotifications.filter(
+                    (notification) => !knownNotificationIds.has(notification.id),
                 );
+
+                if (
+                    knownNotificationIds.size > 0 &&
+                    browserPermission === "granted" &&
+                    typeof Notification !== "undefined"
+                ) {
+                    newNotifications.forEach((notification) => {
+                        new Notification(notification.title, {
+                            body: notification.message,
+                        });
+                    });
+                }
+
+                knownNotificationIds = new Set(
+                    nextNotifications.map((notification) => notification.id),
+                );
+                setNotifications(nextNotifications);
             } catch {
-                setNotifications([]);
+                if (isMounted) {
+                    setNotifications([]);
+                }
             }
         }
 
         void loadNotifications();
-
-        const eventSource = new EventSource(`${backendUrl}/notifications/stream`);
-
-        eventSource.onmessage = (event) => {
-            const notification = normalizeNotification(JSON.parse(event.data) as NotificationPayload);
-
-            if (browserPermission === "granted" && typeof Notification !== "undefined") {
-                new Notification(notification.title, {
-                    body: notification.message,
-                });
-            }
-
-            setNotifications((current) => [notification, ...current].slice(0, 8));
-        };
+        const interval = window.setInterval(() => {
+            void loadNotifications();
+        }, 15_000);
 
         return () => {
-            eventSource.close();
+            isMounted = false;
+            window.clearInterval(interval);
         };
     }, [browserPermission]);
 

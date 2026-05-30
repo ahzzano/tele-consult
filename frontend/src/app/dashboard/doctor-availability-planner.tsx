@@ -45,7 +45,7 @@ const days: Array<{ key: DayKey; label: string; shortLabel: string }> = [
 ];
 
 const startHour = 7;
-const endHour = 22;
+const endHour = 23;
 const slotMinutes = 30;
 const slotsPerHour = 60 / slotMinutes;
 const slotCount = (endHour - startHour) * slotsPerHour;

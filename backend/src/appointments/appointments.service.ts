@@ -15,7 +15,7 @@ import { aliasedTable } from 'drizzle-orm/alias';
 import { RescheduleAppointmentDto } from './dto/reschedule-appointment.dto';
 import { NotificationsService } from 'src/notifications/notifications.service';
 
-const APPOINTMENT_DURATION_MINUTES = 90;
+const APPOINTMENT_DURATION_MINUTES = 60;
 
 @Injectable()
 export class AppointmentsService {
