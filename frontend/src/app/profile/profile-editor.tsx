@@ -205,8 +205,10 @@ function ProfileForm({
                             <FieldDescription>Only fill this in when changing your password.</FieldDescription>
                         </Field>
                         <Field className="sm:col-span-2">
-                            <FieldLabel htmlFor="profile-picture">Profile Picture URL</FieldLabel>
-                            <Input id="profile-picture" name="profilePicture" type="url" className={inputClassName} defaultValue={profilePicture ?? ""} />
+                            <FieldLabel htmlFor="profile-picture">Profile Picture</FieldLabel>
+                            <input type="hidden" name="existingProfilePicture" value={profilePicture ?? ""} />
+                            <Input id="profile-picture" name="profilePictureFile" type="file" accept="image/*" className={`${inputClassName} py-1.5 file:mr-3 file:border-0 file:bg-transparent file:text-sm file:font-medium`} />
+                            <FieldDescription>Upload a JPG, PNG, or other image file up to 2 MB.</FieldDescription>
                         </Field>
                     </CardContent>
                 </Card>

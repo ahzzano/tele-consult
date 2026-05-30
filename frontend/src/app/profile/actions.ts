@@ -17,15 +17,12 @@ const optionalText = z.preprocess(
     z.string().trim().optional()
 );
 
-const optionalUrl = z.preprocess(
-    (value) => (value === "" ? undefined : value),
-    z.string().trim().url("Enter a valid URL").optional()
-);
-
 const optionalNumber = z.preprocess(
     (value) => (value === "" ? undefined : Number(value)),
     z.number().positive("Must be greater than 0").optional()
 );
+
+const maxProfilePictureSize = 2 * 1024 * 1024;
 
 const profileSchema = z.object({
     id: z.coerce.number().int().positive(),
@@ -37,7 +34,7 @@ const profileSchema = z.object({
         (value) => (value === "" ? undefined : value),
         z.string().min(8, "Password must be at least 8 characters").optional()
     ),
-    profilePicture: optionalUrl,
+    profilePicture: optionalText,
     birthday: optionalText,
     contactDetails: optionalText,
     weight: optionalNumber,
@@ -46,6 +43,39 @@ const profileSchema = z.object({
     specialization: optionalText,
     bio: optionalText,
 });
+
+async function getProfilePictureDataUrl(formData: FormData) {
+    const file = formData.get("profilePictureFile");
+
+    if (file instanceof File && file.size > 0) {
+        if (!file.type.startsWith("image/")) {
+            return {
+                error: "Profile picture must be an image file.",
+            };
+        }
+
+        if (file.size > maxProfilePictureSize) {
+            return {
+                error: "Profile picture must be 2 MB or smaller.",
+            };
+        }
+
+        const buffer = Buffer.from(await file.arrayBuffer());
+
+        return {
+            value: `data:${file.type};base64,${buffer.toString("base64")}`,
+        };
+    }
+
+    const existingProfilePicture = formData.get("existingProfilePicture");
+
+    return {
+        value:
+            typeof existingProfilePicture === "string" && existingProfilePicture.trim()
+                ? existingProfilePicture.trim()
+                : undefined,
+    };
+}
 
 export async function updateProfile(
     _previousState: ProfileActionState,
@@ -59,9 +89,22 @@ export async function updateProfile(
 
     const token = (await cookies()).get(AUTH_COOKIE_NAME)?.value;
 
+    const profilePicture = await getProfilePictureDataUrl(formData);
+
+    if (profilePicture.error) {
+        return {
+            status: "error",
+            message: profilePicture.error,
+        };
+    }
+
     const raw = Object.fromEntries(formData.entries());
+    delete raw.profilePictureFile;
+    delete raw.existingProfilePicture;
+
     const result = profileSchema.safeParse({
         ...raw,
+        profilePicture: profilePicture.value,
     });
 
     if (!result.success) {

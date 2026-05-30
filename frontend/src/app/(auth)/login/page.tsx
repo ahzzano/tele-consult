@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { Suspense, useActionState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Input } from "@base-ui/react";
-import { CircleAlert, LogIn } from "lucide-react";
+import { CheckCircle2, CircleAlert, LogIn } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,6 +41,9 @@ export default function LoginPage() {
                                         <p>{state.message}</p>
                                     </div>
                                 ) : null}
+                                <Suspense fallback={null}>
+                                    <RegistrationRedirectMessage />
+                                </Suspense>
 
                                 <Field data-invalid={Boolean(emailErrors?.length)}>
                                     <FieldLabel htmlFor="email">Email</FieldLabel>
@@ -71,4 +75,19 @@ export default function LoginPage() {
             </div>
         </main>
     )
+}
+
+function RegistrationRedirectMessage() {
+    const searchParams = useSearchParams();
+
+    if (searchParams.get("registered") !== "1") {
+        return null;
+    }
+
+    return (
+        <div role="status" className="flex gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
+            <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
+            <p>Account created. Log in to continue.</p>
+        </div>
+    );
 }

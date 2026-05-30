@@ -1,10 +1,7 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-
-import { AUTH_COOKIE_NAME, authCookieOptions } from "@/lib/auth-cookie";
 
 const requiredText = (fieldName: string) =>
     z.string().trim().min(1, `${fieldName} is required`);
@@ -14,15 +11,12 @@ const optionalText = z.preprocess(
     z.string().trim().optional()
 );
 
-const optionalUrl = z.preprocess(
-    (value) => (value === "" ? undefined : value),
-    z.string().trim().url("Enter a valid URL").optional()
-);
-
 const optionalNumber = z.preprocess(
     (value) => (value === "" ? undefined : Number(value)),
     z.number().positive("Must be greater than 0").optional()
 );
+
+const maxProfilePictureSize = 2 * 1024 * 1024;
 
 const baseRegistrationSchema = z.object({
     role: z.enum(["Patient", "Doctor"]),
@@ -30,7 +24,7 @@ const baseRegistrationSchema = z.object({
     lastName: requiredText("Last name"),
     email: z.email("Enter a valid email address").trim(),
     password: z.string().min(8, "Password must be at least 8 characters"),
-    profilePicture: optionalUrl,
+    profilePicture: optionalText,
 });
 
 const patientRegistrationSchema = baseRegistrationSchema.extend({
@@ -53,13 +47,6 @@ const registrationSchema = z.discriminatedUnion("role", [
     doctorRegistrationSchema,
 ]);
 
-type LoginResponse = {
-    success: boolean;
-    data?: {
-        access_token?: string;
-    };
-};
-
 type RegistrationFieldName =
     | "role"
     | "firstName"
@@ -80,6 +67,34 @@ export type RegistrationActionState = {
     message?: string;
     fieldErrors?: Partial<Record<RegistrationFieldName, string[]>>;
 };
+
+async function getProfilePictureDataUrl(formData: FormData) {
+    const file = formData.get("profilePictureFile");
+
+    if (!(file instanceof File) || file.size === 0) {
+        return {
+            value: undefined,
+        };
+    }
+
+    if (!file.type.startsWith("image/")) {
+        return {
+            error: "Profile picture must be an image file.",
+        };
+    }
+
+    if (file.size > maxProfilePictureSize) {
+        return {
+            error: "Profile picture must be 2 MB or smaller.",
+        };
+    }
+
+    const buffer = Buffer.from(await file.arrayBuffer());
+
+    return {
+        value: `data:${file.type};base64,${buffer.toString("base64")}`,
+    };
+}
 
 async function getErrorMessage(response: Response) {
     try {
@@ -102,9 +117,24 @@ export async function register(
         throw new Error("BACKEND_URL is not configured");
     }
 
+    const profilePicture = await getProfilePictureDataUrl(formData);
+
+    if (profilePicture.error) {
+        return {
+            status: "error",
+            message: profilePicture.error,
+            fieldErrors: {
+                profilePicture: [profilePicture.error],
+            },
+        };
+    }
+
     const raw = Object.fromEntries(formData.entries());
+    delete raw.profilePictureFile;
+
     const result = registrationSchema.safeParse({
         ...raw,
+        profilePicture: profilePicture.value,
     });
 
     if (!result.success) {
@@ -146,36 +176,5 @@ export async function register(
         };
     }
 
-    const loginResponse = await fetch(`${backendUrl}/auth/login`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-            email: payload.email,
-            password: payload.password,
-        }),
-    });
-
-    if (!loginResponse.ok) {
-        return {
-            status: "error",
-            message: "Your account was created, but we could not log you in automatically. Please log in.",
-        };
-    }
-
-    const body = (await loginResponse.json()) as LoginResponse;
-    const accessToken = body.data?.access_token;
-
-    if (!accessToken) {
-        return {
-            status: "error",
-            message: "Your account was created, but we could not start your session. Please log in.",
-        };
-    }
-
-    const cookieStore = await cookies();
-    cookieStore.set(AUTH_COOKIE_NAME, accessToken, authCookieOptions);
-
-    redirect("/dashboard");
+    redirect("/login?registered=1");
 }
