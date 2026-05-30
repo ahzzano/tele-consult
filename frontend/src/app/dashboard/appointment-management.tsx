@@ -372,9 +372,10 @@ function PatientRecordsDialog({ appointment }: { appointment: Appointment }) {
                                     <h2 className="font-medium">
                                         {displayValue(selectedRecord?.diagnosis)}
                                     </h2>
-                                    <p className="text-xs text-muted-foreground">
-                                        {formatRecordDate(selectedRecord?.createdAt)}
-                                    </p>
+                                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                                        <span>{formatRecordDate(selectedRecord?.createdAt)}</span>
+                                        <span>Issued by Dr. {getDoctorName(appointment)}</span>
+                                    </div>
                                     <div className="mt-4 grid gap-4 text-sm md:grid-cols-2">
                                         <div>
                                             <p className="font-medium">Summary</p>
