@@ -484,7 +484,7 @@ function MedicalRecordsDisplay({
                                                     {prescription.medicine}
                                                 </span>
                                                 <span className="text-muted-foreground">
-                                                    Dosage: {prescription.dosage}
+                                                    Dosage: {prescription.dosage} mg
                                                 </span>
                                             </div>
                                         ))}

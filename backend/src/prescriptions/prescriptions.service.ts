@@ -197,7 +197,7 @@ export class PrescriptionsService {
             !Number.isFinite(prescriptionData.dosage) ||
             prescriptionData.dosage <= 0
         ) {
-            throw new BadRequestException('Dosage must be a positive number');
+            throw new BadRequestException('Dosage must be a positive number in mg');
         }
     }
 

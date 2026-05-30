@@ -412,7 +412,7 @@ function PatientRecordsDialog({ appointment }: { appointment: Appointment }) {
                                                         {prescription.medicine}
                                                     </span>
                                                     <span className="text-muted-foreground">
-                                                        Dosage: {prescription.dosage}
+                                                        Dosage: {prescription.dosage} mg
                                                     </span>
                                                 </div>
                                             ))}
@@ -547,7 +547,7 @@ function ConsultationNotesDialog({ appointment }: { appointment: Appointment }) 
                                 />
                             </label>
                             <label className="grid min-w-0 gap-1 text-sm">
-                                <span className="font-medium">Dosage</span>
+                                <span className="font-medium">Dosage (mg)</span>
                                 <input
                                     name="dosage"
                                     type="number"
